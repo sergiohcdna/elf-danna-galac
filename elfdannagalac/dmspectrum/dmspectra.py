@@ -51,12 +51,12 @@ ALLOWED_PROJECTS = ('cosmixs','pppc4dmid')
 @ValidString("_process",empty_allowed=False,options=ALLOWED_PROCESSES)
 @ValidString("_project",empty_allowed=False,options=ALLOWED_PROJECTS)
 # @ValidValue("_z",min_val=0)
-@ValidValue("_mass",min_val=5, max_val=1.e+5)
+@ValidValue("_mass",min_val=10, max_val=1.e+5)
 class dmspectrum():
     """
     Class to compute spectra for electron
     from annihilations or decay of dark matter particles.
-    The calculation is based tables from PPPC4DMID project:
+    The calculation is based on tables from PPPC4DMID project:
         http://www.marcocirelli.net/PPPC4DMID.html
     and from the new cosmiXs project:
         https://github.com/ajueid/CosmiXs
@@ -108,7 +108,7 @@ class dmspectrum():
             if channel not in ALLOWED_CHANNELS_COSMIXS:
 
                 msg = ('\nChannel is not valid\n' +
-                       'Options are {0}'.format(ALLOWED_CHANNELS_COSMIXS))
+                       f'Options are {ALLOWED_CHANNELS_COSMIXS}')
                 raise ValueError(msg)
 
             self._channel = channel
@@ -120,7 +120,7 @@ class dmspectrum():
                 val = np.power(10,-8.955)*dm_mass
 
                 msg = ('Min energy is below the allowed value\n'+ 
-                       'Setting to the min value {:.3e}'.format(val))
+                       f'Setting to the min value {val:.3e}')
                 dmslog.warning(msg)
 
                 self._emin = val
@@ -134,7 +134,7 @@ class dmspectrum():
             if channel not in ALLOWED_CHANNELS_PPPC4DMID:
 
                 msg = ('\nChannel is not valid\n' +
-                       'Options are {0}'.format(ALLOWED_CHANNELS_COSMIXS))
+                       f'Options are {ALLOWED_CHANNELS_PPPC4DMID}')
                 raise ValueError(msg)
 
             self._channel = channel
@@ -146,7 +146,7 @@ class dmspectrum():
                 val = np.power(10,-8.9)*dm_mass
 
                 msg = ('Min energy is below the allowed value\n'+ 
-                       'Setting to the min value {:.3e}'.format(val))
+                       f'Setting to the min value {val:.3e}')
                 dmslog.warning(msg)
 
                 self._emin = val
@@ -157,20 +157,37 @@ class dmspectrum():
 
         # Check for emax
         # emax cannot larger than dm_mass for annihilation
-        # and dm_mass/2 for decay. So, we nee to check for both cases
+        # and dm_mass/2 for decay. So, we need to check for both cases
         # The same for e_min, right?
         # At this starting point, only annihilation is ok
-        if emax > dm_mass:
+        # But now, I am including decay too
+        if process == 'anna':
 
-            msg = ('Maximum energy cannot exceed the energy available.\n'+
-                    'Setting Max energy to the mass of the particle')
-            dmslog.warning(msg)
+            if emax > dm_mass:
 
-            self._emax = dm_mass
+                msg = ('Maximum energy cannot exceed the energy available.\n'+
+                        'Setting Max energy to mass of the particle')
+                dmslog.warning(msg)
 
-        else:
+                self._emax = dm_mass
 
-            self._emax = emax
+            else:
+
+                self._emax = emax
+
+        elif process == 'decay':
+
+            if emax > dm_mass/2:
+
+                msg = ('Maximum energy cannot exceed the energy available.\n'+
+                        'Setting Max energy to half mass of the particle')
+                dmslog.warning(msg)
+
+                self._emax = dm_mass/2
+
+            else:
+
+                self._emax = emax
 
         # Get array with values used to get the spectrum
         self._energy   = self._earray(emin,emax,epoints)
@@ -210,13 +227,13 @@ class dmspectrum():
 
         Parameters
         ------------------------
-            dm_mass: Mass (in GeV) [5 GeV,100 TeV]
+            dm_mass: Mass (in GeV) [10 GeV,100 TeV]
         """
 
         # Check that the mass is valid
-        if not (5 <= dm_mass <= 1.e+5):
+        if not (10 <= dm_mass <= 1.e+5):
             raise ValueError(('\nMass of DM particle ' +
-                              'with value {0} '.format(dm_mass) +
+                              f'with value {dm_mass} ' +
                               'is out of range: [5,1.e+5] GeV'))
         
         # Set mass
@@ -243,7 +260,7 @@ class dmspectrum():
                 val = np.power(10,-8.955)*self._mass
 
                 msg = ('Min energy is below the allowed value\n'+ 
-                        'Setting to the min value {:.3e}'.format(val))
+                       f'Setting to the min value {val:.3e}')
                 dmslog.warning(msg)
 
                 self._emin = val
@@ -261,7 +278,7 @@ class dmspectrum():
                 val = np.power(10,-8.9)*self._mass
 
                 msg = ('Min energy is below the allowed value\n'+ 
-                       'Setting to the min value {:.3e}'.format(val))
+                       f'Setting to the min value {val:.3e}')
                 dmslog.warning(msg)
 
                 self._emin = val
@@ -269,6 +286,10 @@ class dmspectrum():
             else:
 
                 self._emin = e_min
+
+        # I need to update the energy values too!!
+        # Get array with values used to get the spectrum
+        self._energy = self._earray(e_min,self._emax,self._epoints)
 
         # Return
         return
@@ -285,18 +306,42 @@ class dmspectrum():
         # and dm_mass/2 for decay. So, we nee to check for both cases
         # The same for e_min, right?
         # At this starting point, only annihilation is ok
+        # But now, I am including decay too c:
 
-        if e_max > self._mass:
+        if self._process == 'anna':
 
-            msg = ('Maximum energy cannot exceed the energy available.\n'+
-                    'Setting Max energy to the mass of the particle')
-            dmslog.warning(msg)
+            if e_max > self._mass:
 
-            self._emax = self._mass
+                msg = ('Maximum energy cannot exceed the energy available.\n'+
+                       'Setting Max energy to mass of the particle')
+                dmslog.warning(msg)
 
-        else:
+                self._emax = self._mass
 
-            self._emax = e_max
+            else:
+
+                self._emax = e_max
+
+        elif self._process == 'decay':
+
+            if e_max > self._mass/2:
+
+                msg = ('Maximum energy cannot exceed the energy available.\n'+
+                       'Setting Max energy to half mass of the particle')
+                dmslog.warning(msg)
+
+                self._emax = self._mass/2
+
+            else:
+
+                self._emax = e_max
+
+        # I need to update the energy values too!!
+        # Get array with values used to get the spectrum
+        self._energy = self._earray(self._emin,e_max,self._epoints)
+
+        # Return
+        return
 
     @property
     def engs(self):
@@ -320,7 +365,7 @@ class dmspectrum():
                 val = np.power(10,-8.955)*self._mass
 
                 msg = ('Min energy is below the allowed value\n'+ 
-                        'Setting to the min value {:.3e}'.format(val))
+                       f'Setting to the min value {val:.3e}')
                 dmslog.warning(msg)
 
                 e_min = val
@@ -339,7 +384,7 @@ class dmspectrum():
                 val = np.power(10,-8.9)*self._mass
 
                 msg = ('Min energy is below the allowed value\n'+ 
-                       'Setting to the min value {:.3e}'.format(val))
+                       f'Setting to the min value {val:.3e}')
                 dmslog.warning(msg)
 
                 e_min      = val
@@ -349,22 +394,35 @@ class dmspectrum():
 
                 self._emin = e_min
 
-        if e_max > self._mass:
+        if self._process == 'anna':
 
-            msg = ('Maximum energy cannot exceed the energy available.\n'+
-                    'Setting Max energy to the mass of the particle')
-            dmslog.warning(msg)
+            if e_max > self._mass:
 
-            self._emax = self._mass
-            e_max      = self._mass
+                msg = ('Maximum energy cannot exceed the energy available.\n'+
+                       'Setting Max energy to mass of the particle')
+                dmslog.warning(msg)
 
-        else:
+                self._emax = self._mass
 
-            self._emax = e_max
+            else:
 
-        energies = self._array(e_min,e_max,e_points)
+                self._emax = e_max
 
-        self._energy = energies
+        elif self._process == 'decay':
+
+            if e_max > self._mass/2:
+
+                msg = ('Maximum energy cannot exceed the energy available.\n'+
+                       'Setting Max energy to half mass of the particle')
+                dmslog.warning(msg)
+
+                self._emax = self._mass/2
+
+            else:
+
+                self._emax = e_max
+
+        self._energy = self._array(e_min,e_max,e_points)
 
         return
 
@@ -379,13 +437,13 @@ class dmspectrum():
         if self._project == 'cosmixs' and ch not in ALLOWED_CHANNELS_COSMIXS:
 
             msg = ('Invalid channel' +
-                   'Options are: {0}'.format(ALLOWED_CHANNELS_COSMIXS))
+                   f'Options are: {ALLOWED_CHANNELS_COSMIXS}')
             dmslog.error(msg)
 
         if self._project == 'pppc4dmid' and ch not in ALLOWED_CHANNELS_PPPC4DMID:
 
             msg = ('Invalid channel' +
-                'Options are: {0}'.format(ALLOWED_CHANNELS_PPPC4DMID))
+                   f'Options are: {ALLOWED_CHANNELS_PPPC4DMID}')
             dmslog.error(msg)
 
         self._channel = ch
@@ -403,7 +461,7 @@ class dmspectrum():
         if dmprocess not in ALLOWED_PROCESSES:
 
             msg = ('Invalid Process.\n'+
-                   'Options are {0}'.format(ALLOWED_PROCESSES))
+                   f'Options are {ALLOWED_PROCESSES}')
             raise ValueError(msg)
         
         self._process = dmprocess
@@ -442,21 +500,26 @@ class dmspectrum():
                 dndlogx[index][pindex] = phi
 
         points   = (masses,log10x)
-        dminterp = RegularGridInterpolator(points,dndlogx,method='cubic',
-                                           bounds_error=False,fill_value=None)
+        dminterp = RegularGridInterpolator(points,dndlogx,method='linear',
+                                           bounds_error=False,fill_value=0.0)
 
         return dminterp
 
     def spectrum(self):
 
+        dm_interp = self._interpolator(self._channel,self._project)
+
         if self._process == 'anna':
-
-            dm_interp = self._interpolator(self._channel,self._project)
-
 
             log10xval = np.log10(self._energy/self._mass)
             dndlogx   = dm_interp((self._mass,log10xval),method='linear')
-            dndlogx   = dndlogx.flatten()
-            dnde      = dndlogx / self._energy / np.log(10)
+
+        elif self._process == 'decay':
+
+            log10xval = np.log10(self._energy/(0.5*self._mass))
+            dndlogx   = dm_interp((0.5*self._mass,log10xval),method='linear')
+
+        dndlogx = dndlogx.flatten()
+        dnde    = dndlogx / (self._energy*np.log(10))
 
         return dnde
