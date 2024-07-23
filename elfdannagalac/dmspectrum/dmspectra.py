@@ -65,7 +65,7 @@ class dmspectrum():
     """
 
     def __init__(self,dm_mass,emin,emax,channel,process='anna',
-                 project='cosmixs',epoints=100, ebins=10):
+                 project='cosmixs',epoints=100, nbins=10):
         """
         Initiate dark matter class
 
@@ -81,7 +81,7 @@ class dmspectrum():
                   dark matter particles
         project : DATA Project used to compute the spectrum
         epoints : Number of points in energy spectrum
-        ebins   : Number of energy bins used to compute weights
+        nbins   : Number of energy bins used to compute weights
         """
 
         # First, setting some properties of the class that don't
@@ -90,7 +90,7 @@ class dmspectrum():
         self._process  = process
         self._project  = project
         self._epoints  = epoints
-        self._ebins    = ebins
+        self._nbins    = nbins
 
         # This is the same variable that both projects
         # use to give the spectrum.
@@ -527,34 +527,72 @@ class dmspectrum():
         return dnde
     
     @property
+    def nbins(self):
+
+        return self._nbins
+    
+    @property
     def ebins(self):
 
-        return self._ebins
+        return self.ebins
     
+    @ebins.setter
+    def ebins(self, nbins):
+        self.nbins = nbins
+
+        min_E=np.log10(self.emin)
+        max_E=np.log10(self.emax)
+
+        E_i=np.logspace(min_E,max_E,self.nbins+1)
+
+        self.ebins = E_i
+
+        return
+
+    @property
+    def weights(self):
+
+        return self.weights
+
+    @weights.setter    
     def weights(self):
         Weights=[]
-        index_list=np.zeros((self.ebins,), dtype=list)
+        index_list=np.zeros((self.nbins,), dtype=list)
 
         E_spectrum=self.spectrum(self)
         N_tot = sum(E_spectrum)
 
-        min_E=np.log10(min(self._energy))
-        max_E=np.log10(max(self._energy))
-        E_i=np.logspace(min_E,max_E+0.001,self.ebins+1)    
+        E_i = self.ebins
         
         for i in range(len(E_i)-1):                                     
             index=[]
 
-            for j, item in enumerate(self._energy):
-                if ((item >= E_i[i]) and (item < E_i[i+1])):
-                    index.append(j)
+            if i != (len(E_i)-1)-1:
+                for j, item in enumerate(self._energy):
+                    if ((item >= E_i[i]) and (item < E_i[i+1])):
+                        index.append(j)
 
-            index_list[i]=(index)
-            spec_i=[]
+                index_list[i]=(index)
+                spec_i=[]
 
-            for num in index_list[i]:
-                spec_i.append(E_spectrum[num])
+                for num in index_list[i]:
+                    spec_i.append(E_spectrum[num])
 
-            Weights.append(sum(spec_i)/N_tot)
+                Weights.append(sum(spec_i)/N_tot)
 
-        return Weights
+            else:
+                for j, item in enumerate(self._energy):
+                    if ((item >= E_i[i]) and (item <= E_i[i+1])):
+                        index.append(j)
+
+                index_list[i]=(index)
+                spec_i=[]
+
+                for num in index_list[i]:
+                    spec_i.append(E_spectrum[num])
+
+                Weights.append(sum(spec_i)/N_tot)
+
+        self.weights = Weights
+
+        return
