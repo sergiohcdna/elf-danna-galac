@@ -91,6 +91,9 @@ class dmspectrum():
         self._project  = project
         self._epoints  = epoints
         self._nbins    = nbins
+        self._ebins    = None
+        self._weights  = None
+   
 
         # This is the same variable that both projects
         # use to give the spectrum.
@@ -203,7 +206,7 @@ class dmspectrum():
         Return energy array to compute the spectra.
         The calculation is based in the number of points
         Return an np.array instance. The energies are
-        computed assuming logarithmic distance
+        computed assuming logarithmic distance.
         """
         logemin  = np.log10(emin)
         logemax  = np.log10(emax)
@@ -214,16 +217,24 @@ class dmspectrum():
     
     @staticmethod
     def _engbins(emin,emax,nbins):
-
+        """"
+        Returns np.array with energy bins' edges 
+        to compute spectrum weights according to 
+        the given number of bins.Also computed assuming
+        logarithmic distance.
+        """
         min_E=np.log10(emin)
         max_E=np.log10(emax)
-
         E_i=np.logspace(min_E,max_E,nbins+1)
 
         return E_i
     
     @staticmethod
     def _Weights(engs,E_spectrum,ebins,nbins):
+        """"
+        Returns np.array with electron spectrum weights
+        according to the given number of bins. 
+        """
         Weights=[]
         index_list=np.zeros((nbins,), dtype=list)
         N_tot = sum(E_spectrum)
@@ -581,12 +592,16 @@ class dmspectrum():
     
     @property
     def ebins(self):
+
         return self._ebins
     
     @ebins.setter
     def ebins(self,emin,emax,nbins):
+
+        #Get array with bin edges used to clculate weights
         self._ebins = self._engbins(emin,emax,nbins)
 
+        #Return
         return
 
     @property
@@ -594,9 +609,11 @@ class dmspectrum():
 
         return self._weights
     
-
     @weights.setter    
     def weights(self):
-        self.weights = self._Weights(self._energy,self.spectrum(),self._ebins, self._nbins)
 
+        #Get array with spectrum weights
+        self._weights = self._Weights(self._energy,self.spectrum(),self._ebins, self._nbins)
+
+        #Return
         return
