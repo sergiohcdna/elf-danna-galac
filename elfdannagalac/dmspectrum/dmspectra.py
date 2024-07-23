@@ -211,6 +211,54 @@ class dmspectrum():
 
         #   Return
         return energies
+    
+    @staticmethod
+    def _engbins(emin,emax,nbins):
+
+        min_E=np.log10(emin)
+        max_E=np.log10(emax)
+
+        E_i=np.logspace(min_E,max_E,nbins+1)
+
+        return E_i
+    
+    @staticmethod
+    def _Weights(engs,E_spectrum,ebins,nbins):
+        Weights=[]
+        index_list=np.zeros((nbins,), dtype=list)
+        N_tot = sum(E_spectrum)
+        E_i=ebins
+        
+        for i in range(len(E_i)-1):                                     
+            index=[]
+
+            if i != (len(E_i)-1)-1:
+                for j, item in enumerate(engs):
+                    if ((item >= E_i[i]) and (item < E_i[i+1])):
+                        index.append(j)
+
+                index_list[i]=(index)
+                spec_i=[]
+
+                for num in index_list[i]:
+                    spec_i.append(E_spectrum[num])
+
+                Weights.append(sum(spec_i)/N_tot)
+
+            else:
+                for j, item in enumerate(engs):
+                    if ((item >= E_i[i]) and (item <= E_i[i+1])):
+                        index.append(j)
+
+                index_list[i]=(index)
+                spec_i=[]
+
+                for num in index_list[i]:
+                    spec_i.append(E_spectrum[num])
+
+                Weights.append(sum(spec_i)/N_tot)
+
+        return Weights
 
 
     @property
@@ -533,66 +581,22 @@ class dmspectrum():
     
     @property
     def ebins(self):
-
-        return self.ebins
+        return self._ebins
     
     @ebins.setter
-    def ebins(self, nbins):
-        self.nbins = nbins
-
-        min_E=np.log10(self.emin)
-        max_E=np.log10(self.emax)
-
-        E_i=np.logspace(min_E,max_E,self.nbins+1)
-
-        self.ebins = E_i
+    def ebins(self,emin,emax,nbins):
+        self._ebins = self._engbins(emin,emax,nbins)
 
         return
 
     @property
     def weights(self):
 
-        return self.weights
+        return self._weights
+    
 
     @weights.setter    
     def weights(self):
-        Weights=[]
-        index_list=np.zeros((self.nbins,), dtype=list)
-
-        E_spectrum=self.spectrum(self)
-        N_tot = sum(E_spectrum)
-
-        E_i = self.ebins
-        
-        for i in range(len(E_i)-1):                                     
-            index=[]
-
-            if i != (len(E_i)-1)-1:
-                for j, item in enumerate(self._energy):
-                    if ((item >= E_i[i]) and (item < E_i[i+1])):
-                        index.append(j)
-
-                index_list[i]=(index)
-                spec_i=[]
-
-                for num in index_list[i]:
-                    spec_i.append(E_spectrum[num])
-
-                Weights.append(sum(spec_i)/N_tot)
-
-            else:
-                for j, item in enumerate(self._energy):
-                    if ((item >= E_i[i]) and (item <= E_i[i+1])):
-                        index.append(j)
-
-                index_list[i]=(index)
-                spec_i=[]
-
-                for num in index_list[i]:
-                    spec_i.append(E_spectrum[num])
-
-                Weights.append(sum(spec_i)/N_tot)
-
-        self.weights = Weights
+        self.weights = self._Weights(self._energy,self.spectrum(),self._ebins, self._nbins)
 
         return
