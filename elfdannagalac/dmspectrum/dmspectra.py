@@ -91,10 +91,7 @@ class dmspectrum():
         self._project  = project
         self._epoints  = epoints
         self._nbins    = nbins
-        self._ebins    = None
-        self._weights  = None
    
-
         # This is the same variable that both projects
         # use to give the spectrum.
         # Using log10x to be able to compare relatively 
@@ -194,8 +191,10 @@ class dmspectrum():
 
                 self._emax = emax
 
-        # Get array with values used to get the spectrum
+        # Get array with values used to get the spectrum, array of energy bin edges and array with weights
         self._energy   = self._earray(emin,emax,epoints)
+        self._ebins    = self._engbins(emin,emax,self.nbins)
+        self._weights  = self._Weights(self._energy,self.spectrum(),self._ebins, self._nbins)
 
         #   Return
         return
@@ -400,6 +399,7 @@ class dmspectrum():
         # I need to update the energy values too!!
         # Get array with values used to get the spectrum
         self._energy = self._earray(self._emin,e_max,self._epoints)
+        self._ebins = self._engbins(self._emin,e_max,self._nbins)
 
         # Return
         return
@@ -484,6 +484,7 @@ class dmspectrum():
                 self._emax = e_max
 
         self._energy = self._array(e_min,e_max,e_points)
+        self._ebins = self._engbins(e_min,e_max,self._nbins)
 
         return
 
@@ -590,16 +591,36 @@ class dmspectrum():
 
         return self._nbins
     
+    @nbins.setter
+    def nbins(self,numbins):
+
+        if (type(numbins) is int) and (numbins >= 0):
+
+            self._nbins = numbins
+
+            self._ebins = self._engbins(self._emin,self._emax,numbins)
+
+            self._weights  = self._Weights(self._energy,self.spectrum(),self._ebins, numbins)
+            
+        else:
+
+            raise ValueError(('\nValue of nbins must be a positive integer.'))
+        
+
+        return
+        
     @property
     def ebins(self):
 
         return self._ebins
     
     @ebins.setter
-    def ebins(self,emin,emax,nbins):
+    def ebins(self):
 
         #Get array with bin edges used to clculate weights
-        self._ebins = self._engbins(emin,emax,nbins)
+        self._ebins = self._engbins(self._emin,self._emax,self._nbins)
+
+        # self._weights  = self._Weights(self._energy,self.spectrum(),self._ebins, self._nbins)
 
         #Return
         return
@@ -613,7 +634,7 @@ class dmspectrum():
     def weights(self):
 
         #Get array with spectrum weights
-        self._weights = self._Weights(self._energy,self.spectrum(),self._ebins, self._nbins)
+        self._weights = self._Weights(self._energy,self.spectrum(),self._ebins,self._nbins)
 
         #Return
         return
