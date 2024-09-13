@@ -7,7 +7,7 @@ The name of this science project is the acronym for ELectron Flux induced by Dar
 
 ### Authors
 
-1. Arlette Melo Galindo (UAM)
+1. Arlette Melo Galindo (IF-UNAM)
 2. Miguel A. Sánchez Conde (IFT-UAM)
 3. Sergio Hernández Cadena (TDLI-SJTU)
 

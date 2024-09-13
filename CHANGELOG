@@ -1,1 +1,14 @@
+### Authors
+
+1. Arlette Melo Galindo (IF-UNAM)
+2. Miguel A. Sánchez Conde (IFT-UAM)
+3. Sergio Hernández Cadena (TDLI-SJTU)
+
 - Febreuary 2024: First version c:
+
+# September 2024
+## v 0.1.1
+
+- Add calculation of weights in the dmspectra class to estimate the fraction of particles for certain energy intervals. This is useful in the context of simulations with CRpropa to estimate the flux photons from electron diffusion and propagation.
+- Add CRpropa custom spectra class. This is to include the DM-induced electron spectrum to assign energy to electrons injected from a source
+in CRpropa simulations.
