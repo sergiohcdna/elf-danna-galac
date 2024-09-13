@@ -9,7 +9,7 @@ setup(
 
     name='elfdannagalac',
 
-    version='0.1.0',
+    version='0.1.1',
 
     description='ELectron Flux from Dm ANNihilation And propagation in GALAxy Clusters',
 
