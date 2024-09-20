@@ -1,2 +1,2 @@
 # February, 2024
-__all__ = ['dmspectrum','tools']
+__all__ = ['dmspectrum','tools','crpropafeatures']
