@@ -13,6 +13,8 @@
 from elfdannagalac.dmspectrum import dmspectra
 
 import argparse as ap
+import time
+
 from elfdannagalac.tools.misc import elapsed_time
 
 if __name__ == '__main__':
