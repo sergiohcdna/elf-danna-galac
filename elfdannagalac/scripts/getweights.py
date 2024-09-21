@@ -40,6 +40,8 @@ if __name__ == '__main__':
                      type=str,required=False,default='cosmixs',metavar='cosmixs')
     src.add_argument('--nbins',help='Number of bins for electron spectrum, used for CRpropa',
                      type=int,required=False,default=10,metavar='10')
+    src.add_argument('--nparticles',help='Numer of particles used on CRpropa sims',
+                     type=int,required=False,default=1e+6,metavar='1000000')
 
     args = options.parse_args()
 
@@ -70,6 +72,17 @@ if __name__ == '__main__':
         edgeu  = ebin_edges[idx+1]
         weight = eweights[idx]
         print(f'\t{edgel:03e} -- {edgeu:03e} --> {weight:03e}')
+
+    print(f'Then, for example for {args.nparticles}')
+    print('The number of particles for each bin should be:')
+
+    for idx in range(args.nbins):
+
+        edgel  = ebin_edges[idx]
+        edgeu  = ebin_edges[idx+1]
+        weight = eweights[idx]
+
+        print(f'\t{edgel:03e} -- {edgeu:03e} --> {int(weight*args.nparticles)}')
 
     msg = 'Total Elapsed time: '
     elapsed_time(this_start,msg)
