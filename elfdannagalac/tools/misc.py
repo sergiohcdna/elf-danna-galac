@@ -6,8 +6,7 @@
 #       https://www.informit.com/articles/    #
 ###############################################
 
-import numpy as np
-
+import os
 import time
 
 class GenericDescriptor:
@@ -113,5 +112,25 @@ def elapsed_time(start,msg=''):
         msg = f'Time to finish whatever process you are doing was: {strtime}'
 
     print(msg)
+
+    return
+
+def checkDir(thispath):
+    '''
+    This function allow to check if the path belongs 
+    to a directory or any other file-type.
+    The functions is useful to check if any output path
+    corresponds to a valid directory
+    '''
+    if os.path.exists(thispath) :
+        if not os.path.isdir(thispath) :
+            raise ValueError('{0} is not a directory'.format(thispath))
+        else :
+            print('Specified path is a directory. Nothing to do')
+    else :
+        msg = ('It seems like the path does not exists.')
+        print(msg)
+        print('Creating directory')
+        os.makedirs(thispath)
 
     return
