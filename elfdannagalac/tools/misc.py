@@ -9,6 +9,8 @@
 import os
 import time
 
+from pathlib import Path
+
 class GenericDescriptor:
 
     def __init__(self,getter,setter):
@@ -116,21 +118,19 @@ def elapsed_time(start,msg=''):
     return
 
 def checkDir(thispath):
-    '''
-    This function allow to check if the path belongs 
+    """
+    This function allow to check if the path belongs
     to a directory or any other file-type.
     The functions is useful to check if any output path
     corresponds to a valid directory
-    '''
-    if os.path.exists(thispath) :
-        if not os.path.isdir(thispath) :
-            raise ValueError('{0} is not a directory'.format(thispath))
-        else :
-            print('Specified path is a directory. Nothing to do')
-    else :
-        msg = ('It seems like the path does not exists.')
+    """
+    if thispath.exists():
+        print(f"{thispath} already exists")
+    else:
+        msg = "It seems like the directory does not exists."
         print(msg)
-        print('Creating directory')
-        os.makedirs(thispath)
+        print("Creating directory")
+        # os.makedirs(thispath)
+        thispath.mkdir(parents=True,exist_ok=True)
 
     return
