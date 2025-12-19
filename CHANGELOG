@@ -12,3 +12,17 @@
 - Add calculation of weights in the dmspectra class to estimate the fraction of particles for certain energy intervals. This is useful in the context of simulations with CRpropa to estimate the flux photons from electron diffusion and propagation.
 - Add CRpropa custom spectra class. This is to include the DM-induced electron spectrum to assign energy to electrons injected from a source
 in CRpropa simulations.
+
+# December 2025
+## v 0.1.2
+
+- Incorporate turbulent and radial profile for magnetic field in the IntraClusterMedium (bfields.py)
+- Incorporate extended continuous injection source following the DM halo (dmsource.py)
+- Adding function to prepare photon Observers (observers.py)
+- Adding function to prepare CRpropa txt Output Instance (utils.py)
+- Adding function to convert from CRpropa txt Output to a fits table (utils.py)
+- Reorganizing code
+- Adding script to run simulation including turbulent magnetic field and extended source for injection of particles (diff_edm.py)
+- Adding loguru for logging management
+- Adding pyproject.toml to the project
+- Make script for diffusion of electrons in the ICM available in the cli (diffedm)
