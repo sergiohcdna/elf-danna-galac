@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+authors = [
+  {name  = "Sergio Hernandez Cadena",email = "skerzot@ciencias.unam.mx"},
+  {name  = "Arlette Melo Galindo",email = "arlettemega@gmail.com"},
+  {name  = "Miguel Sanchez Conde",email = "miguel.sanchezconde@uam.es"}
+]
+
+name = "elfdannagalac"
+version = "0.1.2"
+description = "Invoking a witch (or wizard?) to search for the black relics in clusters of galaxies!"
+readme = "README.md"
+requires-python = "==3.10.14"
+dependencies = [
+    "astropy",
+    "matplotlib",
+    "numpy<=1.26.4",
+    "loguru"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[project.scripts]
+diffedm = "elfdannagalac.scripts.diff_edm:main"
+
