@@ -6,9 +6,9 @@
 #       https://www.informit.com/articles/    #
 ###############################################
 
-import os
 import time
 
+from loguru import logger
 from pathlib import Path
 
 class GenericDescriptor:
@@ -113,11 +113,11 @@ def elapsed_time(start,msg=''):
     else:
         msg = f'Time to finish whatever process you are doing was: {strtime}'
 
-    print(msg)
+    logger.info(msg)
 
     return
 
-def checkDir(thispath):
+def checkDir(thispath:Path):
     """
     This function allow to check if the path belongs
     to a directory or any other file-type.
@@ -125,11 +125,11 @@ def checkDir(thispath):
     corresponds to a valid directory
     """
     if thispath.exists():
-        print(f"{thispath} already exists")
+        logger.info(f"{thispath} already exists")
     else:
         msg = "It seems like the directory does not exists."
-        print(msg)
-        print("Creating directory")
+        logger.warning(msg)
+        logger.info("Creating directory")
         # os.makedirs(thispath)
         thispath.mkdir(parents=True,exist_ok=True)
 
