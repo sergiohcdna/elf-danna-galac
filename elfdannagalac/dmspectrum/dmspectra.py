@@ -5,16 +5,17 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
 import os
-import logging
+# import logging
+from loguru import logger
 from ..tools.misc import ValidString,ValidValue
 
-dmslog    = logging.getLogger(__name__)
-fmt       = ('%(asctime)s[%(levelname)s] @ %(filename)s.%(funcName)s ' +
-             '(%(lineno)d): %(message)s')
-dmhandler = logging.StreamHandler()
-dmformat  = logging.Formatter(fmt)
-dmhandler.setLevel(logging.WARNING)
-dmhandler.setFormatter(dmformat)
+# logger    = logging.getLogger(__name__)
+# fmt       = ('%(asctime)s[%(levelname)s] @ %(filename)s.%(funcName)s ' +
+#              '(%(lineno)d): %(message)s')
+# dmhandler = logging.StreamHandler()
+# dmformat  = logging.Formatter(fmt)
+# dmhandler.setLevel(logging.WARNING)
+# dmhandler.setFormatter(dmformat)
 
 
 
@@ -123,7 +124,7 @@ class dmspectrum():
 
                 msg = ('Min energy is below the allowed value\n'+ 
                        f'Setting to the min value {val:.3e}')
-                dmslog.warning(msg)
+                logger.warning(msg)
 
                 self._emin = val
 
@@ -149,7 +150,7 @@ class dmspectrum():
 
                 msg = ('Min energy is below the allowed value\n'+ 
                        f'Setting to the min value {val:.3e}')
-                dmslog.warning(msg)
+                logger.warning(msg)
 
                 self._emin = val
 
@@ -169,7 +170,7 @@ class dmspectrum():
 
                 msg = ('Maximum energy cannot exceed the energy available.\n'+
                         'Setting Max energy to mass of the particle')
-                dmslog.warning(msg)
+                logger.warning(msg)
 
                 self._emax = dm_mass
 
@@ -183,7 +184,7 @@ class dmspectrum():
 
                 msg = ('Maximum energy cannot exceed the energy available.\n'+
                         'Setting Max energy to half mass of the particle')
-                dmslog.warning(msg)
+                logger.warning(msg)
 
                 self._emax = dm_mass/2
 
@@ -321,7 +322,7 @@ class dmspectrum():
 
                 msg = ('Min energy is below the allowed value\n'+ 
                        f'Setting to the min value {val:.3e}')
-                dmslog.warning(msg)
+                logger.warning(msg)
 
                 self._emin = val
 
@@ -339,7 +340,7 @@ class dmspectrum():
 
                 msg = ('Min energy is below the allowed value\n'+ 
                        f'Setting to the min value {val:.3e}')
-                dmslog.warning(msg)
+                logger.warning(msg)
 
                 self._emin = val
 
@@ -374,7 +375,7 @@ class dmspectrum():
 
                 msg = ('Maximum energy cannot exceed the energy available.\n'+
                        'Setting Max energy to mass of the particle')
-                dmslog.warning(msg)
+                logger.warning(msg)
 
                 self._emax = self._mass
 
@@ -388,7 +389,7 @@ class dmspectrum():
 
                 msg = ('Maximum energy cannot exceed the energy available.\n'+
                        'Setting Max energy to half mass of the particle')
-                dmslog.warning(msg)
+                logger.warning(msg)
 
                 self._emax = self._mass/2
 
@@ -427,7 +428,7 @@ class dmspectrum():
 
                 msg = ('Min energy is below the allowed value\n'+ 
                        f'Setting to the min value {val:.3e}')
-                dmslog.warning(msg)
+                logger.warning(msg)
 
                 e_min = val
                 self._emin = e_min
@@ -446,7 +447,7 @@ class dmspectrum():
 
                 msg = ('Min energy is below the allowed value\n'+ 
                        f'Setting to the min value {val:.3e}')
-                dmslog.warning(msg)
+                logger.warning(msg)
 
                 e_min      = val
                 self._emin = val
@@ -461,7 +462,7 @@ class dmspectrum():
 
                 msg = ('Maximum energy cannot exceed the energy available.\n'+
                        'Setting Max energy to mass of the particle')
-                dmslog.warning(msg)
+                logger.warning(msg)
 
                 self._emax = self._mass
 
@@ -475,7 +476,7 @@ class dmspectrum():
 
                 msg = ('Maximum energy cannot exceed the energy available.\n'+
                        'Setting Max energy to half mass of the particle')
-                dmslog.warning(msg)
+                logger.warning(msg)
 
                 self._emax = self._mass/2
 
@@ -500,13 +501,13 @@ class dmspectrum():
 
             msg = ('Invalid channel' +
                    f'Options are: {ALLOWED_CHANNELS_COSMIXS}')
-            dmslog.error(msg)
+            logger.error(msg)
 
         if self._project == 'pppc4dmid' and ch not in ALLOWED_CHANNELS_PPPC4DMID:
 
             msg = ('Invalid channel' +
                    f'Options are: {ALLOWED_CHANNELS_PPPC4DMID}')
-            dmslog.error(msg)
+            logger.error(msg)
 
         self._channel = ch
 
