@@ -1,6 +1,7 @@
-from crpropa import *
-
 from scipy.stats import rv_discrete
+
+from crpropa import SourceFeature
+from crpropa import GeV
 
 import time
 

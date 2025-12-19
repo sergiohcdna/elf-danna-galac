@@ -1,2 +1,1 @@
-# September, 2024
-__all__ = ['srcDMSpectra']
+from .srcDMSpectra import SourceDMSpectrum
