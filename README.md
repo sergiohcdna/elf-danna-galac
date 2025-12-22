@@ -162,3 +162,7 @@ Because, we need to estimate the grids to approximate the DM density and the mag
 ## Physics behind
 
 Blah
+
+## Coordinate system
+
+Blah
