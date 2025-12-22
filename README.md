@@ -157,7 +157,7 @@ A simulation using some default parameters should be like this:
 diffedm --emin 100 --emax 1e4 --nparticles 100000 --ofname testSmoothHalo.fits.gz --cluster_center 16 0 0 --brms 5.0 --lmin 0.02 --lmax 0.15 --origin_box 14 -2 -2 --eta_index 0.33  --core_radius 0.25 --ncells 512 --spacing 0.008 --srcz 0.0043 --dmprofile nfw  --dmprofile_pars 0.3 157.556 0.008 5.605e3 --xmin 14.0 --xmax 18.0 --ymin -2.0 --ymax 2.0 --zmin -2.0 --zmax 2.0 --maxtries 1e6 --dmsource_type extended_smooth
 ```
 
-Because, we need to estimate the grids to approximate the DM density and the magnetic field of the galaxy cluster, the total simulation for 1e5 particles takes approximately 45 min.
+Because, we need to estimate the grids to approximate the DM density and the magnetic field of the galaxy cluster, the total simulation for 1e5 particles takes approximately 45 min using 16 threads in a remote server with Alma 8.
 
 ## Physics behind
 
