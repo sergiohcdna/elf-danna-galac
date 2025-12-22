@@ -29,7 +29,8 @@ For convenience we provide the instructions to install the whole package includi
 Please refer to the official [`CRpropa` documentation](https://crpropa.github.io/CRPropa3/pages/Installation.html) for more details. The following are the instructions with we were able to have a running virtual environment.
 
 ```bash
-# The first part is to create the virtual environment and install all the necessar
+# The first part is to create the virtual environment and install all the necessary dependencies
+# Most of them could be in a single line, but I don't like really long lines
 conda create -n edmcanna -c conda-forge python=3.11 c-compiler cxx-compiler fortran-compiler cmake llvm openmpi gsl -y
 conda activate edmcanna
 conda install -c conda-forge ucx
@@ -42,7 +43,7 @@ conda activate edmcanna
 mkdir EDMClusters
 cd EDMClusters
 
-# Esto es para instalar fftw3
+# This is to install fftw3
 wget http://www.fftw.org/fftw-3.3.10.tar.gz
 tar -zxf fftw-3.3.10.tar.gz
 cd fftw-3.3.10/
@@ -50,24 +51,39 @@ cd fftw-3.3.10/
 make -j 4
 make install
 
-# Ahora nos cambiamos al directorio del ambiente virtual
+# As we want everything encapsulated, we change to the venv's directory
 cd ${CONDA_PREFIX}
 
-# Y descargamos CRPropa
+# Downoading CRpropa
 wget https://github.com/CRPropa/CRPropa3/archive/refs/tags/3.2.1.tar.gz
 tar -xzf 3.2.1.tar.gz
 cd CRPropa3-3.2.1/
 
-# Esto es para compilar CRPropa usando compiladores de conda
+# This is to compile CRpropa using conda's gcc compilers
 mkdir build && cd build
 CMAKE_PREFIX_PATH=${CONDA_PREFIX} cmake -DCMAKE_INSTALL_PREFIX=${CONDA_PREFIX} .. ${CMAKE_ARGS} -DSIMD_EXTENSIONS:STRING=native -Wno-dev -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 make -j 8
-# El test dirá que falla la parte de MagneticLenses
-# Pero después de revisarlo con Rafa,
-# resulta que es un issue conocido y nadie sabe a qué
-# se debe o si hay alguna solución
-# Pero el código funciona bien sin problemas
-# a pesar de no pasar ese test :)
+
+# The test for MagneticLenses will fail
+# After checking with one of the CRpropa developers,
+# it turns out that the issue is known but no one knows
+# how to solve it.
 make test
 make install
 ```
+Other extra packages will be downloaded when installing this package, as loguru.
+
+> [!NOTE]
+> The numpy version fixed to 1.26.4 prevents to be able to install `CRpropa` in virtual environments with `python > 3.12`.
+> The policy option when building `CRpropa` is needed for compatibility with recent versions of cmake
+
+### Installation of elfdannagalac
+
+As for now, the analysis scripts are under development, and the package is not available at PyPi for download. Then, a local installation is needed. (We wouldn't probably publish the package at PyPi).
+Then once you clone the repository, you should change to that folder and use
+
+```bash
+python -m pip install .
+```
+
+Once the installation finished, you should have disponible in your command line interface (cli) the app `diffedm`
