@@ -157,7 +157,39 @@ A simulation using some default parameters should be like this:
 diffedm --emin 100 --emax 1e4 --nparticles 100000 --ofname testSmoothHalo.fits.gz --cluster_center 16 0 0 --brms 5.0 --lmin 0.02 --lmax 0.15 --origin_box 14 -2 -2 --eta_index 0.33  --core_radius 0.25 --ncells 512 --spacing 0.008 --srcz 0.0043 --dmprofile nfw  --dmprofile_pars 0.3 157.556 0.008 5.605e3 --xmin 14.0 --xmax 18.0 --ymin -2.0 --ymax 2.0 --zmin -2.0 --zmax 2.0 --maxtries 1e6 --dmsource_type extended_smooth
 ```
 
-Because, we need to estimate the grids to approximate the DM density and the magnetic field of the galaxy cluster, the total simulation for 1e5 particles takes approximately 45 min using 16 threads in a remote server with Alma 8.
+An example of the expected output is:
+
+```bash
+2025-12-23 00:31:22.851 | INFO     | elfdannagalac.scripts.diff_edm:main:275 - Getting parameters
+2025-12-23 00:31:22.852 | INFO     | elfdannagalac.tools.misc:checkDir:128 - . already exists
+2025-12-23 00:31:22.852 | INFO     | elfdannagalac.scripts.diff_edm:main:302 - Calculation of Magnetic Field grid for cluster: 
+2025-12-23 00:32:24.304 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:100 - Description of the field:
+2025-12-23 00:32:24.305 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:101 - Correlation Length is: 39.182 kpc
+2025-12-23 00:32:24.305 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:102 - RMS B field is: 5.0 microG
+2025-12-23 00:32:24.305 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:103 - Mean B field is: 4.606491319465118 microG
+2025-12-23 00:32:24.305 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:104 - B field at the center of the cluster: 5.218 microG
+2025-12-23 00:48:58.419 | INFO     | elfdannagalac.scripts.diff_edm:main:346 - Preparing Diffusion module
+2025-12-23 00:48:58.420 | INFO     | elfdannagalac.scripts.diff_edm:main:392 - Preparing dark matter source
+2025-12-23 00:48:58.420 | INFO     | elfdannagalac.scripts.diff_edm:main:411 - You choose an extended source for this simulation
+2025-12-23 00:48:58.420 | INFO     | elfdannagalac.scripts.diff_edm:main:412 - Considering the smooth contribution of the DM halo
+2025-12-23 00:49:15.738 | INFO     | elfdannagalac.scripts.diff_edm:main:443 - Cosmic ray source
+        SourceRedshift: Redshift z = 0.0043
+    SourceIsotropicEmission: Random isotropic direction
+    SourceParticleType: 11
+    SourcePowerLawSpectrum: Random energy E = 1e-07 - 1e-05 EeV, dN/dE ~ E^-2
+
+2025-12-23 00:49:15.738 | INFO     | elfdannagalac.scripts.diff_edm:main:444 - Particle 11, E = 5.27485e-07 EeV, x = 16.1587 0.0683999 -0.0395202 Mpc, p = -0.686251 0.160108 0.709524
+2025-12-23 00:49:15.739 | INFO     | elfdannagalac.scripts.diff_edm:main:449 - Preparing CRpropa txtOutput to save data
+2025-12-23 00:49:15.739 | INFO     | elfdannagalac.scripts.diff_edm:main:463 - Preparing Photon Observer
+2025-12-23 00:49:15.778 | INFO     | elfdannagalac.scripts.diff_edm:main:496 - Adding Different modules to the simulation
+crpropa::ModuleList: Number of Threads: 16
+Run ModuleList
+  Started Tue Dec 23 00:49:15 2025 : [ Finished ] 100%    Needed: 00:26:44  - Finished at Tue Dec 23 01:15:59 2025
+2025-12-23 01:15:59.165 | INFO     | elfdannagalac.scripts.diff_edm:main:512 - Saving data to fits table
+2025-12-23 01:24:31.929 | INFO     | elfdannagalac.tools.misc:elapsed_time:116 - Total Elapsed time: 00:53:09
+```
+
+Because, we need to estimate the grids to approximate the DM density and the magnetic field of the galaxy cluster, the total simulation for 1e5 particles takes approximately 55 min using 16 threads in a remote server with Alma 8.
 
 ## Physics behind
 
