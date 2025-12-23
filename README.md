@@ -161,8 +161,30 @@ Because, we need to estimate the grids to approximate the DM density and the mag
 
 ## Physics behind
 
-Blah
+Here we simply describe the modeling behind some of the calculations, as for the magnetic field and DM density profiles.
+
+### Magnetic field of the galaxy cluster
+
+Observations indicate that the magnetic field in a galaxy cluster is turbulent with a strength $B$ decaying as a function of the distance to the center of the cluster, $r$. From radio, the spatial modulation (decay) of the magnetic field is proportional to the numeric density of electrons $n_e$ to some index $\eta$:
+
+```math
+B(r) = B_0\left(\frac{n_e}{n_0}\right)^{\eta}
+```
+
+$n_e$ can be determined from radio observations as well. Typically, a $\beta$ model is used to describe the observatoinal data:
+
+```math
+n_e = n_0\left(1+\frac{r}{r_\text{c}}\right)^{-\frac{3\beta}{2}}
+```
+
+To simulate the diffusion of electrons in a galaxy cluster, we model $B(r)$ in a cluster using `CRpropa`. We separate this in two steps. First, the turbulent magnetic field is computed over a grid covering the total spatial extension of the cluster. The rubulent field uses an instance of `SimpleGridTurbulence`, with appropiate $B_\text{RMS}$ and length scales $l_\text{min}$ and $l_\text{max}$. In a second step, the resulting turbulent field is scaled using a `Grid1f` object where the values are the ones obtained from $B(r)$ modulation function given previously.
+
+### Dark Matter profiles and injection points 
+
+We also need to tell `CRpropa` what will be the location of the sources to inject electrons in the DM halo of the galaxy cluster. From cosmological simulations, we expect two contributions to the DM halo of galaxy clusters, a smooth component from the main halo, and some (a lot of) subhalos embedded in the galaxy cluster. For the smooth component we use the same approach as in this [`CRpropa` tutorial](https://crpropa.github.io/CRPropa3/pages/example_notebooks/density/density_grid_sampling.html). We create a grid with values of the DM mass density profile (for now, we are only considering a Navaroo-Frenk-White, NFW, profile) normalized to the maximum value of the density (either the saturation density $\rho_\text{sat}$ or the density at the radius given by the dimension of the grid, $`\rho_\text{DM}(r_\text{step})`$). Then, the particles to be simulated are injected with position sampled from the DM density profile of the main smooth halo. This give us the extended diffuse component.
+
+For the subhalos, **work in progress**
 
 ## Coordinate system
 
-Blah
+All the vector positions and related calculations are done in the coordinate system of an observer at Earth. Then, for example, to compute the radial distance to the center of a galaxy cluster, we need to estimate the norm of the vector resulting from the difference between the vectors $\vec{r_\text{obs,cc}}$ and $\vec{r_\text{obs,particle}}$, $\left|\vec{r_\text{obs,particle}} - \vec{r_\text{obs,cc}}\right|$ (cc refers to cluster center).
