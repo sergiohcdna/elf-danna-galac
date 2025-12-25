@@ -26,4 +26,5 @@ where = ["."]
 
 [project.scripts]
 diffedm = "elfdannagalac.scripts.diff_edm:main"
+countsmap = "elfdannagalac.scripts.plotmaps:get_counts_map"
 
