@@ -74,7 +74,7 @@ make install
 Other extra packages will be downloaded when installing this package, as loguru.
 
 > [!NOTE]
-> The numpy version fixed to 1.26.4 prevents to be able to install `CRpropa` in virtual environments with `python > 3.12`.
+> The numpy version fixed to 1.26.4 prevents the installation of `CRpropa` in virtual environments with `python > 3.12`.
 > The policy option when building `CRpropa` is needed for compatibility with recent versions of cmake
 
 ### Installation of elfdannagalac
