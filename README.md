@@ -86,7 +86,10 @@ Then once you clone the repository, you should change to that folder and use
 python -m pip install .
 ```
 
-Once the installation is finished, you should have disponible in your command line interface (cli) the app `diffedm`
+Once the installation is finished, you should have disponible in your command line interface (cli) the apps:
+
+* `diffedm`
+* `countsmap`
 
 ## Running a simulation
 
@@ -191,6 +194,53 @@ Run ModuleList
 
 Because, we need to estimate the grids to approximate the DM density and the magnetic field of the galaxy cluster, the total simulation for 1e5 particles takes approximately 55 min using 16 threads in a remote server with Alma 8.
 
+## Getting a projected map of photons detected
+
+From the output of the simulation, we can generate a plot of the number of photons reaching the detection surface (`ObserverSurface`) at the outskirts of the cluster. We only consider those photons going in the dierction of the observer at Earth within a field of view of the angular size of the cluster. All the calculations are packed in the app `countsmap`. An example of the help message for this app is:
+
+```bash
+countsmap --help
+
+usage: countsmap [-h] --srcname Virgo Toy --srcz 0.0043 --srcpos (16,0,0) Mpc (16,0,0) Mpc (16,0,0) Mpc --srcdistance 16.0 Mpc --fov 8.0 deg
+                 [--pixsize 0.1 deg] --rfile path/to/results.fits.gz [--frame icrs] [--odir ./]
+
+Galaxy clusters project: elf-danna-galac December/2025
+
+options:
+  -h, --help            show this help message and exit
+
+Galaxy Cluster:
+  Input params
+
+  --srcname Virgo Toy   Name of the cluster [to save files]
+  --srcz 0.0043         Redshift of the cluster
+  --srcpos (16,0,0) Mpc (16,0,0) Mpc (16,0,0) Mpc
+                        Cartesian Position of the center of the cluster [Mpc]
+  --srcdistance 16.0 Mpc
+                        Distance to the cluster [Mpc]
+  --fov 8.0 deg         FOV Angular size [deg]
+  --pixsize 0.1 deg     Angular size of pixels used for binning [deg]
+  --rfile path/to/results.fits.gz
+                        Path to fits with results from CRpropa simulation
+  --frame icrs          Name of frame used for SkyCoord representation
+  --odir ./             Output directory to save files
+```
+
+And example of the output is:
+
+```bash
+countsmap --srcname "Virgo Toy" --srcz 0.0043 --srcpos -15.48616789 -2.09541755 3.43334085 --srcdistance 16.0 --fov 8.0 --pixsize 0.1 --rfile testVirgoSmoothHalo.fits.gz --frame icrs 
+2025-12-25 04:39:04.321 | INFO     | elfdannagalac.scripts.plotmaps:get_counts_map:112 - Getting parameters
+2025-12-25 04:39:04.322 | INFO     | elfdannagalac.tools.misc:checkDir:128 - . already exists
+2025-12-25 04:39:04.322 | INFO     | elfdannagalac.scripts.plotmaps:get_counts_map:118 - Getting source position
+2025-12-25 04:39:04.323 | INFO     | elfdannagalac.scripts.plotmaps:get_counts_map:128 - Getting particle positions and directions
+2025-12-25 04:39:27.400 | INFO     | elfdannagalac.scripts.plotmaps:get_counts_map:134 - Getting FOV mask
+2025-12-25 04:39:29.287 | INFO     | elfdannagalac.scripts.plotmaps:get_counts_map:142 - Getting image data
+2025-12-25 04:39:30.354 | INFO     | elfdannagalac.scripts.plotmaps:get_counts_map:152 - Plotting
+2025-12-25 04:39:32.171 | INFO     | elfdannagalac.tools.misc:elapsed_time:116 - Total Elapsed time: 00:00:27
+```
+
+
 ## Physics behind
 
 Here we simply describe the modeling behind some of the calculations, as for the magnetic field and DM density profiles.
@@ -220,3 +270,7 @@ For the subhalos, **work in progress**
 ## Coordinate system
 
 All the vector positions and related calculations are done in the coordinate system of an observer at Earth. Then, for example, to compute the radial distance to the center of a galaxy cluster, we need to estimate the norm of the vector resulting from the difference between the vectors $\vec{r_\text{obs,cc}}$ and $\vec{r_\text{obs,particle}}$, $\left|\vec{r_\text{obs,particle}} - \vec{r_\text{obs,cc}}\right|$ (cc refers to cluster center).
+
+## Observers
+
+We place different observers to detect the photons and electrons at different distance from the center of the cluster. For now, all the observers are placed on spheres concentric to the galaxy cluster. In the case of electrons, different distances from the center are used in order to get an idea of the 3D radial profile of injected electrons. The data collected from the electrons are also useful to get the 2D projected radial profile and compare directly with other observables from our simulation as the 2D projected radial profile for photons.
