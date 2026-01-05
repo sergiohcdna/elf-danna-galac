@@ -4,6 +4,7 @@ from .dmsource import (
     dm_number_density,
     dm_mass_density,
     SmoothDMHaloMassDensityGrid,
+    SmoothDMHaloMassSquaredDensityGrid,
     SmoothDMHaloNumberDensityGrid,
     DMSourceSmoothDistro,
     preparePointLikeDMSource,
