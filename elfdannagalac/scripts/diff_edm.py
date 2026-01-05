@@ -29,11 +29,13 @@ from ..observer.observers import preparePhotonObserver
 
 from ..dmsrc.dmsource import (
     SmoothDMHaloMassDensityGrid,
+    SmoothDMHaloMassSquaredDensityGrid,
     preparePointLikeDMSource,
     prepareSmoothExtendedDMSource
 )
 
 from ..dmsrc.dmsource import allowed_spatial_types,allowed_profiles
+from ..dmspectrum.dmspectra import ALLOWED_PROCESSES
 
 from ..tools.utils import create_table,prepareOutput
 
@@ -84,6 +86,15 @@ def main():
         type=float,
         nargs="+",
         required=False,
+    )
+    src.add_argument(
+        "--process",
+        help="Annihilation or Decay?",
+        type=str,
+        required=False,
+        default="anna",
+        choices=ALLOWED_PROCESSES,
+        metavar=ALLOWED_PROCESSES
     )
     src.add_argument(
         '--emin',
@@ -281,6 +292,8 @@ def main():
     msg = "Unknown file extension to save results"
     assert args.ofname.lower().endswith(("fits.gz","fits")),logger.error(msg)
 
+    logger.info(f"Preparing simulation for DM {args.process} in a cluster")
+
     cx,cy,cz = args.cluster_center
     ox,oy,oz = args.origin_box
     c_center = Vector3d(cx,cy,cz)
@@ -409,19 +422,33 @@ def main():
     if args.dmsource_type.lower() == "extended_smooth":
 
         logger.info("You choose an extended source for this simulation")
-        logger.info("Considering the smooth contribution of the DM halo")
+        logger.info("Considering the smooth contribution of the DM halo ")
         # First we need to prepare the DMDensity Grid 
         # then, we can define the source to inject the particles.
         # By default, we are assuming that each sampled source inject 
         # particles isotropically.
-        dmgrid = SmoothDMHaloMassDensityGrid(
-            c_center,
-            origin_v,
-            int(args.ncells/4),
-            args.spacing*4,
-            args.dmprofile_pars,
-            args.dmprofile
-        )
+
+        if args.process.lower() == "decay":
+
+            dmgrid = SmoothDMHaloMassDensityGrid(
+                c_center,
+                origin_v,
+                int(args.ncells/4),
+                args.spacing*4,
+                args.dmprofile_pars,
+                args.dmprofile
+            )
+
+        if args.process.lower() == "anna":
+
+            dmgrid = SmoothDMHaloMassSquaredDensityGrid(
+                c_center,
+                origin_v,
+                int(args.ncells/4),
+                args.spacing*4,
+                args.dmprofile_pars,
+                args.dmprofile
+            )
 
         s = prepareSmoothExtendedDMSource(
             dmgrid,
