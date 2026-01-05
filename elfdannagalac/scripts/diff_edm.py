@@ -94,7 +94,7 @@ def main():
         required=False,
         default="anna",
         choices=ALLOWED_PROCESSES,
-        metavar=ALLOWED_PROCESSES
+        metavar="[anna,decay]"
     )
     src.add_argument(
         '--emin',
