@@ -105,11 +105,10 @@ diffedm --help
 For your convenience, the output is:
 
 ```bash
-usage: diffedm [-h] --srcz 0.0043 --dmprofile nfw --dmsource_type extended_smooth [--dmprofile_pars DMPROFILE_PARS [DMPROFILE_PARS ...]] --emin 100 --emax 1e5
-               --nparticles 10000 --brms 5 muG --lmin 0.02 Mpc --lmax 0.15 Mpc --cluster_center (16,0,0) Mpc (16,0,0) Mpc (16,0,0) Mpc --origin_box (14,-2,-2) Mpc
-               (14,-2,-2) Mpc (14,-2,-2) Mpc --eta_index 0.33 --core_radius 0.25 Mpc [--diff_epsilon 0.1] [--diff_scale 0.1] [--diff_alpha 0.1] --ncells 512 --spacing
-               0.008 Mpc [--xmin 14.0 Mpc] [--xmax 18.0 Mpc] [--ymin -2.0 Mpc] [--ymax 2.0 Mpc] [--zmin -2.0 Mpc] [--zmax 2.0 Mpc] [--maxtries 100000]
-               [--ofname OFNAME] [--odir ./]
+usage: diffedm [-h] --srcz 0.0043 --dmprofile nfw --dmsource_type extended_smooth [--dmprofile_pars DMPROFILE_PARS [DMPROFILE_PARS ...]] [--process [anna,decay]] --emin 100
+               --emax 1e5 --nparticles 10000 --brms 5 muG --lmin 0.02 Mpc --lmax 0.15 Mpc --cluster_center (16,0,0) Mpc (16,0,0) Mpc (16,0,0) Mpc --origin_box (14,-2,-2) Mpc
+               (14,-2,-2) Mpc (14,-2,-2) Mpc --eta_index 0.33 --core_radius 0.25 Mpc [--diff_epsilon 0.1] [--diff_scale 0.1] [--diff_alpha 0.1] --ncells 512 --spacing 0.008
+               Mpc [--xmin 14.0 Mpc] [--xmax 18.0 Mpc] [--ymin -2.0 Mpc] [--ymax 2.0 Mpc] [--zmin -2.0 Mpc] [--zmax 2.0 Mpc] [--maxtries 100000] [--ofname OFNAME] [--odir ./]
 
 Galaxy clusters project: elf-danna-galac November/2025
 
@@ -125,6 +124,8 @@ Galaxy Cluster:
                         Point or Extended like DM injection sources
   --dmprofile_pars DMPROFILE_PARS [DMPROFILE_PARS ...]
                         Parameters to describe the DM density profile
+  --process [anna,decay]
+                        Annihilation or Decay?
   --emin 100            Minimum energy of electrons (GeV)
   --emax 1e5            Maximum energy of electrons (GeV)
   --nparticles 10000    Number of particles to be smulated
