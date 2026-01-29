@@ -1,6 +1,7 @@
 ###############################################################################
 # Diffusion of electrons  in the intraclluster medium of galaxy clusters      #
 #   - Preparing DM profiles used for source injection                         #
+#   - Including units                                                         #
 #-----------------------------------------------------------------------------#
 #                      THE ELF-DANNA-GALAC Task force                         #
 #                      - Arlette Melo Galindo                                 #
@@ -10,7 +11,10 @@
 #             December-2025                                                   #
 ###############################################################################
 
+import astropy.units as u
 import numpy as np
+
+from scipy.integrate import quad
 
 from crpropa import GridProperties,Vector3d,Grid1f
 from crpropa import DensityGrid
@@ -26,53 +30,188 @@ from crpropa import (
 
 from crpropa import Mpc
 
-# from types import NoneType
+from ..tools.conversions import convert_density,convert_mass
 
 # allowed_profiles = ["nfw","burkert","einasto"]
 allowed_profiles      = ["nfw"]
 allowed_spatial_types = ["pointlike","extended_smooth"]
 
+def get_rhosat(dmmass:u.Quantity,sigmav:u.Quantity):
+
+    dmm = convert_mass(dmmass,new_unit=u.GeV)
+    sv  = sigmav.to(u.cm**3/u.s)
+
+    rhosat = 3e18*(dmm.value/100.0)/(sv.value/1e-26)
+
+    return rhosat*u.M_sun/u.kpc**3
+
 def NFW_profile(
-    r       : float,
-    r_s     : float,
-    rho_s   : float,
-    r_sat   : float,
-    rho_sat : float
-) -> float:
+    r           : u.Quantity,
+    rs          : u.Quantity,
+    rhos        : u.Quantity,
+    rsat        : u.Quantity,
+    rhosat      : u.Quantity,
+    length_unit : u.Unit = u.Mpc
+) -> u.Quantity:
 
     """
     Calculation of the mass density profile for a 
     NFW profile. Different to other cases, we need to include 
-    a saturation radius to avoid divergence at the origin.
-    No units are specifies, so in principle any self-consistent 
-    election of values should work.
-    ToDo: include units?
+    a saturation radius to avoid divergence at the origin.  
+    We include units, but any unit conversion 
+    can be done in other functions. 
     
-        :param r: Distance to the center of the DM halo
-        :type r: float
-        :param r_s: Scale radius of the DM halo
-        :type r_s: float
-        :param rho_s: Density at the scale radius
-        :type rho_s: float
-        :param r_sat: Radius where saturation density is reached
-        :type r_sat: float
-        :param rho_sat: Saturation density
-        :type rho_sat: float
-        :return: profile of mass density
-        :rtype: float
+    :param r: Distance to the center of the DM halo
+    :type r: u.Quantity
+    :param r_s: Scale radius of the DM halo
+    :type r_s: u.Quantity
+    :param rho_s: Density at the scale radius
+    :type rho_s: u.Quantity
+    :param r_sat: Radius where saturation density is reached
+    :type r_sat: u.Quantity
+    :param rho_sat: Saturation density
+    :type rho_sat: u.Quantity
+    :param length_unit: Unit for distance comparison [default= u.Mpc]
+    type length_unit: u.Unit
+    :return: profile of mass density
+    :rtype: u.Quantity
     """
 
-    x = r/r_s
+    x = r.to(length_unit)/rs.to(length_unit)
 
-    if r < r_sat:
+    if r.to(length_unit) <= rsat.to(length_unit):
 
-        density = rho_sat
+        density = rhosat
 
     else:
 
-        density = rho_s/(x*(1+x)**2)
+        density = rhos/(x*(1+x)**2)
 
     return density
+
+def get_enclosed_mass_nfw(
+    r      : u.Quantity,
+    rs     : u.Quantity,
+    rhos   : u.Quantity,
+    rsat   : u.Quantity,
+    rhosat : u.Quantity,
+    length_unit : u.Unit = u.Mpc
+) -> u.Quantity:
+
+    """
+    Total DM mass enclosed up to a radius r for an spherical 
+    halo with density described by the NFW profile.
+
+    To apply the same operations through the different functions, 
+    I will split the integral in the three different ranges as 
+    for the calculation of the jfactor/dfactor.
+    This is only to include the term close to the saturation radius 
+    where the density has a peak. 
+    Again, this is only particular to the case of NFW profile. 
+    Other DM profiles have not divergence at the center of the halo. 
+    But, in this case, I need to consider different cases 
+    according to the integration radii: 
+
+    1. If r < r_sat (one integration)
+
+    2. If rsat < r < rs (two integrations)
+
+    3. If r > rs (three integrations)
+        
+    :param r: Distance from the center of the DM halo
+    :type r: u.Quantity
+    :param rs: Scale radius
+    :type rs: u.Quantity
+    :param rhos: Scale density (rho(rs) = rhos)
+    :type rhos: u.Quantity
+    :param rsat: Saturation radius
+    :type rsat: u.Quantity
+    :param rhosat: Saturation density
+    :type rhosat: u.Quantity
+    :param length_unit: Unit for distance comparison [default= u.Mpc]
+    :type length_unit: u.Unit
+    :return: Total enclosed DM mass
+    :rtype: u.Quantity
+    """
+
+    r_      = r.to(length_unit)
+    rs_     = rs.to(length_unit)
+    rsat_   = rsat.to(length_unit)
+    rhos_   = convert_density(rhos,new_unit=u.Msun/length_unit**3)
+    rhosat_ = convert_density(rhosat,new_unit=u.Msun/length_unit**3)
+
+    int_args = (rs_,rhos_,rsat_,rhosat_,length_unit)
+
+    def integrand(r_,rs,rhos,rsat,rhosat,length_unit=length_unit):
+
+        dm = (r_*length_unit)**2*NFW_profile(
+            r_*length_unit,
+            rs,
+            rhos,
+            rsat,
+            rhosat,
+            length_unit=length_unit
+        )
+
+        return dm.value
+
+    if r_ < rsat_:
+
+        total_mass = quad(
+            integrand,
+            0,
+            r_.value,
+            args=int_args
+        )[0]
+
+    if rsat_ < r_ < rs_:
+
+        # Two integrals
+
+        m1 = quad(
+            integrand,
+            0,
+            rsat_.value,
+            args=int_args
+        )[0]
+
+        m2 = quad(
+            integrand,
+            rsat_.value,
+            r_.value,
+            args=int_args
+        )[0]
+
+        total_mass = m1 + m2
+
+    if r_ > rs_:
+
+        # three integrals
+
+        m1 = quad(
+            integrand,
+            0,
+            rsat_.value,
+            args=int_args
+        )[0]
+
+        m2 = quad(
+            integrand,
+            rsat_.value,
+            rs_.value,
+            args=int_args
+        )[0]
+
+        m3 = quad(
+            integrand,
+            rs_.value,
+            r_.value,
+            args=int_args
+        )[0]
+
+        total_mass = m1 + m2 + m3
+
+    return 4*np.pi*total_mass*u.Msun
 
 def dm_number_density(
     r       : float,
