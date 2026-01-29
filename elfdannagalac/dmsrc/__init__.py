@@ -10,3 +10,6 @@ from .dmsource import (
     preparePointLikeDMSource,
     prepareSmoothExtendedDMSource
 )
+
+from .concentrations import allowed_concentrations
+from .concentrations import get_c,get_c_sub
