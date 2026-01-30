@@ -13,3 +13,4 @@ from .dmsource import (
 
 from .concentrations import allowed_concentrations
 from .concentrations import get_c,get_c_sub
+from .halo import DMHalo
