@@ -38,7 +38,7 @@ class DMHalo():
         rs        : u.Quantity,
         rhos      : u.Quantity,
         r200      : u.Quantity,
-        dmmass    : u.Quantity = 1e5*u.GeV,
+        dmmass    : u.Quantity = 100*u.GeV,
         dmsigmav  : u.Quantity = 3.6e-26*u.cm**3/u.s,
         fsub      : float      = 0.2,
         msub_min  : u.Quantity = 1e8*u.M_sun,
@@ -241,9 +241,9 @@ class DMHalo():
             f" (from [{self._msub_min:0.3e},{self._msub_max:0.3e}])\n"
             f"\t- Total mass in form of subhalos: {self._msub:0.3e} "
             f"({self._fsub*100.0}% of the cluster mass)\n"
-            f"\t- Anna J factor [No sub]: {self._jfactor:0.3e} "
+            f"\t- (Spherical) Anna J factor [No sub]: {self._jfactor:0.3e} "
             f"({self._jfactorpp:0.3e})\n"
-            f"\t- Decay D factor [No sub]: {self._dfactor:0.3e} "
+            f"\t- (Spherical) Decay D factor [No sub]: {self._dfactor:0.3e} "
             f"({self._dfactorpp:0.3e})\n"
         )
 
