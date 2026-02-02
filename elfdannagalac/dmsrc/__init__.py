@@ -8,7 +8,9 @@ from .dmsource import (
     SmoothDMHaloNumberDensityGrid,
     DMSourceSmoothDistro,
     preparePointLikeDMSource,
-    prepareSmoothExtendedDMSource
+    prepareSmoothExtendedDMSource,
+    get_rhosat,
+    get_enclosed_mass_nfw
 )
 
 from .concentrations import allowed_concentrations
