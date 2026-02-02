@@ -60,7 +60,7 @@ def jfactor_on_sphere_nfw(
     """
 
     lunit = rs.unit
-    dunit = u.Msunh/lunit**3
+    dunit = u.Msun/lunit**3
     units = dunit**2*(lunit)
 
     rhos_   = convert_density(rhos,new_unit=dunit)
@@ -76,21 +76,21 @@ def jfactor_on_sphere_nfw(
     jfactor_01 = quad(
         integrand,
         0,
-        rsat.to(u.Mpc).value,
+        rsat.to(lunit).value,
         args=(rs,rhos_,rsat,rhosat_)
     )[0]
 
     jfactor_02 = quad(
         integrand,
-        rsat.to(u.Mpc).value,
-        rs.to(u.Mpc).value,
+        rsat.to(lunit).value,
+        rs.to(lunit).value,
         args=(rs,rhos,rsat,rhosat)
     )[0]
 
     jfactor_03 = quad(
         integrand,
-        rs.to(u.Mpc).value,
-        rmax.to(u.Mpc).value,
+        rs.to(lunit).value,
+        rmax.to(lunit).value,
         args=(rs,rhos,rsat,rhosat)
     )[0]
 
