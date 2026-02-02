@@ -43,7 +43,7 @@ def get_rhosat(dmmass:u.Quantity,sigmav:u.Quantity):
 
     rhosat = 3e18*(dmm.value/100.0)/(sv.value/1e-26)
 
-    return rhosat*u.M_sun/u.kpc**3
+    return rhosat*u.Msun/u.kpc**3
 
 def NFW_profile(
     r           : u.Quantity,
