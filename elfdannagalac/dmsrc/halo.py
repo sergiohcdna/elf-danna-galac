@@ -13,6 +13,7 @@
 import astropy.units as u
 import numpy as np
 
+from astropy.constants import G
 from astropy.coordinates import SkyCoord
 from astropy.cosmology import FlatLambdaCDM
 
@@ -35,8 +36,7 @@ class DMHalo():
         ra        : u.Quantity,
         dec       : u.Quantity,
         z         : float,
-        rs        : u.Quantity,
-        rhos      : u.Quantity,
+        m200      : u.Quantity,
         r200      : u.Quantity,
         dmmass    : u.Quantity = 100*u.GeV,
         dmsigmav  : u.Quantity = 3.6e-26*u.cm**3/u.s,
@@ -52,27 +52,85 @@ class DMHalo():
         csublabel : str        = "moline2017"
     ) -> None:
 
-        lunit = rs.unit
+        r"""
+        Create a DM halo given the radius ($R_{200}$) where the density is 
+        200 times the critical density of the universe at redshift z, 
+        and the mass enclosed up to $R_{200}$, $M_{200}$. The class computes 
+        all the parameters related to the DM halo as the saturation density 
+        and saturation radius and the concentration parameter. For a given 
+        value of substructure (fraction of the total mass and the mass range) 
+        it also computes the total number of subhalos and the normalization 
+        of the subhalo PDF. Additionally, computes the astrophysical factors 
+        (without projecting along the line of sight) and returns the convenient 
+        functions $\rho(r)$ and $\rho(r)^2$.
+
+        The equatorial coordinates (J200) and redshift of the source need to be 
+        provided to estimate the luminosity distance and return the cartesian 
+        coordinates of the center of the halo. 
+        
+            :param name: Name of the DM halo
+            :type name: str
+            :param ra: Right Ascension (J200) [deg]
+            :type ra: u.Quantity
+            :param dec: Declination (J200) [deg]
+            :type dec: u.Quantity
+            :param z: Redshift to the source
+            :type z: float
+            :param m200: Total mass of the halo
+            :type m200: u.Quantity
+            :param r200: Radius where the density is $200\rho_c$ 
+            :type r200: u.Quantity
+            :param dmmass: Mass of the DM particle candidate
+            :type dmmass: u.Quantity
+            :param dmsigmav: Thermal average annihilation cross section
+            :type dmsigmav: u.Quantity
+            :param fsub: Fraction of the total mass in form of subhalos
+            :type fsub: float
+            :param msub_min: Minimum mass of a subhalo
+            :type msub_min: u.Quantity
+            :param msub_max: Maximum mass of a subhalo
+            :type msub_max: u.Quantity
+            :param index_pm: Index of the SubHalo Mass Function
+            :type index_pm: float
+            :param sigma_c: Width of the c-log-normal distribution
+            :type sigma_c: float
+            :param h: Reduced hubble constant
+            :type h: float
+            :param mpoints: Number of points to do the integral of the SHMF
+            :type mpoints: int
+            :param clabel: Name of the c-mass relation for the host halo
+            :type clabel: str
+            :param dmprofile: Name of the DM profile
+            :type dmprofile: str
+            :param csublabel: Name of the c-mass relation for the subhalos
+            :type csublabel: str
+        """
+
+        lunit = r200.unit
         dunit = u.Msun/lunit**3
 
         rhosat = get_rhosat(dmmass,dmsigmav)
+        cosmo  = FlatLambdaCDM(100*h,Om0=0.3,Ob0=0.04)
+        rhoc   = 3*cosmo.H0**2*(cosmo.Om0*(1+z)**3 + cosmo.Ode0)/(8*np.pi*G)
+        rhoc   = convert_density(rhoc,new_unit=u.Msun/lunit**3)
 
         self._name      = name
         self._ra        = ra
         self._dec       = dec
         self._z         = z
-        self._rs        = rs.to(lunit)
-        self._rhos      = convert_density(rhos,new_unit=dunit)
         self._r200      = r200.to(lunit)
         self._clabel    = clabel,
+        self._m200      = convert_mass(m200,new_unit=u.Msun)
+        self._c200      = get_c(self._m200,clabel=clabel)
+        self._rs        = self._r200/self._c200
+        logterm         = np.log(1+self._c200)-self._c200/(1+self._c200)
+        self._rhos      = 200*rhoc*self._c200**3/(3*logterm)
         self._dmprofile = dmprofile
         self._csublabel = csublabel
         self._dmmas     = dmmass
         self._dmsigmav  = dmsigmav
         self._rhosat    = convert_density(rhosat,new_unit=dunit)
         self._rsat      = self._rs*(self._rhos/self._rhosat)
-        self._m200      = self.get_m200()
-        self._c200      = get_c(self._m200,clabel=clabel)
         self._jfactor   = self.jfactor_sph()
         self._dfactor   = self.dfactor_sph()
         self._fsub      = fsub
@@ -101,8 +159,6 @@ class DMHalo():
         self._kw   = self.get_kw()
         self._nsub = self.get_nnorm()
         self._msub = self.get_msub(self._r200,self._msub_min,self._msub_max)
-
-        cosmo = FlatLambdaCDM(100*self._h,Om0=0.3,Ob0=0.04)
 
         self._dlum  = cosmo.luminosity_distance(self._z).to(u.Mpc)
         self._coord = SkyCoord(ra=ra,dec=dec,frame="icrs",distance=self._dlum)
@@ -231,12 +287,12 @@ class DMHalo():
             f"\t- X: {self._cart.x.to(u.Mpc):0.3f}\n"
             f"\t- Y: {self._cart.y.to(u.Mpc):0.3f}\n"
             f"\t- Z: {self._cart.z.to(u.Mpc):0.3f}\n"
+            f"\t- Cluster Radius [R200]: {self._r200:0.3f}\n"
+            f"\t- Total Mass [M200]: {self._m200:0.3e}\n"
             f"\t- Scale radius: {self._rs:0.3f}\n"
             f"\t- Scale density: {self._rhos:0.3e}\n"
             f"\t- Saturation Radius: {self._rsat:0.3e}\n"
             f"\t- Saturation Density: {self._rhosat:0.3e}\n"
-            f"\t- Cluster Radius [R200]: {self._r200:0.3f}\n"
-            f"\t- Total Mass [M200]: {self._m200:0.3e}\n"
             f"\t- Number of subhalos: {self._nsub} "
             f" (from [{self._msub_min:0.3e},{self._msub_max:0.3e}])\n"
             f"\t- Total mass in form of subhalos: {self._msub:0.3e} "
@@ -347,9 +403,9 @@ class DMHalo():
     def get_nnorm(self) -> int:
 
         # This function is used to estimate the 
-        # normalization in the number of subhalo
+        # normalization in the number of subhalos 
         # function. We recquire that the faction 
-        # of mass in the form of subhalos is fsub
+        # of mass in the form of subhalos is fsub 
         # in the range of msub_min and msub_mass.
 
         pnorm = self._kw
