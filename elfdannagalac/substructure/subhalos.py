@@ -106,7 +106,7 @@ def p_nsub_tot(
 
 
     dndm = p_nsub_m(mass_halo,index,norm)
-    dndv = p_nsub_v(r,rs,rhos,rsat,rhosat,m200)
+    dndv = p_nsub_v(r,rs,rhos,rsat,rhosat,r200,m200)
     dndc = p_nsub_c(c_sub,sigma_c,mass_halo,r,r200,h,clabel=clabel)
 
     tot_prob = dndv*dndm*dndc

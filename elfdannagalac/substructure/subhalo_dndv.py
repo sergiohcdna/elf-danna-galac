@@ -20,6 +20,7 @@ def p_nsub_v(
     rhos   : u.Quantity,
     rsat   : u.Quantity,
     rhosat : u.Quantity,
+    rtrunc : u.Quantity,
     m200   : u.Quantity,
 ) -> u.Quantity:
     
@@ -48,7 +49,7 @@ def p_nsub_v(
     :rtype: Quantity
     """
 
-    prob = NFW_profile(r,rs,rhos,rsat,rhosat,length_unit=rs.unit)
+    prob = NFW_profile(r,rs,rhos,rsat,rhosat,rtrunc,length_unit=rs.unit)
 
     return prob/m200
 
@@ -58,6 +59,7 @@ def p_nsub_v_int(
     rhos   : u.Quantity,
     rsat   : u.Quantity,
     rhosat : u.Quantity,
+    rtrunc : u.Quantity,
     m200   : u.Quantity,
 ) -> u.Quantity:
 
@@ -89,7 +91,7 @@ def p_nsub_v_int(
     lunit = rs.unit
 
     prob_int = get_enclosed_mass_nfw(
-        r,rs,rhos,rsat,rhosat,length_unit=lunit
+        r,rs,rhos,rsat,rhosat,rtrunc,length_unit=lunit
     )/m200
 
     return prob_int
