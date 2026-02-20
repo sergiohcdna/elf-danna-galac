@@ -408,7 +408,7 @@ def SmoothDMHaloMassDensityGrid(
 
             for idz in range(gridpos.Nz):
 
-                dm_density.setValue(idx,idy,idz,rho/rho_max)
+                dm_density.setValue(idx,idy,idz,0)
 
     dens = DensityGrid(dm_density,True,False,False)
 
@@ -493,11 +493,13 @@ def SmoothDMHaloMassSquaredDensityGrid(
                     dummyvec.x**2+dummyvec.y**2+dummyvec.z**2
                 )
 
-                rho = dm_mass_density(
-                    distance,
-                    dmpars,
-                    label=dmprofile
-                )
+                # rho = dm_mass_density(
+                #     distance,
+                #     dmpars,
+                #     label=dmprofile
+                # )
+
+                rho = 1.0
 
                 dm_density.setValue(idx,idy,idz,rho**2/rho_max**2)
 
@@ -590,12 +592,14 @@ def SmoothDMHaloNumberDensityGrid(
                     dummyvec.x**2+dummyvec.y**2+dummyvec.z**2
                 )
 
-                ndensity = dm_number_density(
-                    distance,
-                    dmpars,
-                    dm_mass=dmmass,
-                    label=dmprofile
-                )
+                # ndensity = dm_number_density(
+                #     distance,
+                #     dmpars,
+                #     dm_mass=dmmass,
+                #     label=dmprofile
+                # )
+
+                ndensity = 1.0
 
                 dm_density.setValue(idx,idy,idz,ndensity/rho_max)
 
