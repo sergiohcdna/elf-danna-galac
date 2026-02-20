@@ -1,6 +1,6 @@
 ###############################################################################
 # Diffusion of electrons  in the intraclluster medium of galaxy clusters      #
-#   - Astrophysical factor for annihilation                                   #
+#   - Luminosity for DM annihilation                                          #
 #-----------------------------------------------------------------------------#
 #                      THE ELF-DANNA-GALAC Task force                         #
 #                      - Arlette Melo Galindo                                 #
@@ -19,31 +19,35 @@ from ..dmsrc.dmsource import NFW_profile
 
 from ..tools.conversions import convert_density
 
-def jfactor_on_sphere_nfw(
+def luminosity_anna_nfw(
     rmax   : u.Quantity,
     rs     : u.Quantity,
     rhos   : u.Quantity,
     rsat   : u.Quantity,
-    rhosat : u.Quantity
+    rhosat : u.Quantity,
+    rtrunc : u.Quantity,
 ) -> u.Quantity:
 
-    """
-    Astrophysical J factor computed for the NFW 
+    r"""
+    Annihilation luminosity for the NFW 
     DM profile. The integral is done without 
     considering the line-of-sigh projection. 
     We use the units of the scale radius to make 
     comparisons between the different radial distances. 
     The default units for mass and density are 
     $M_\odot$ and $M_odot~[\text{distance}]^{3}$. 
-    The J factor is:
+    The luminosity is:
 
-    $J = 4\pi\int_0^{r_\text{max}} {\rm d}r \rho(r)^2$
+    $J = 4\pi\int_0^{r_\text{max}} {\rm d}r r^2 \rho(r)^2$
 
     The integral is always done from the center of the host 
     halo to a maximum radius rmax. This should be enough for 
     all the purposes of this code. Please note, that we include 
-    the angular factor $4\pi$. The units of the D factor are 
-    $M_odot^2~[\text{distance}]^{5}$
+    the angular factor $4\pi$ and the units of the emissivity are 
+    $M_odot^2~[\text{distance}]^{3}$. The actual luminosity has 
+    units of ergs/sec, then, this value needs to be multiplied 
+    by a factor of $\langle\sigma v\rangle/m_\text{DM}$ to get 
+    the correct units.
     
     :param rmax: Upper limit in radius for the integral
     :type rmax: u.Quantity
@@ -55,43 +59,46 @@ def jfactor_on_sphere_nfw(
     :type rsat: u.Quantity
     :param rhosat: Saturation density
     :type rhosat: u.Quantity
-    :return: Dfactor [Msun**2/(rs.unit)**5]
+    :return: Dfactor [Msun**2/(rs.unit)**3]
     :rtype: Quantity
     """
 
     lunit = rs.unit
     dunit = u.Msun/lunit**3
-    units = dunit**2*(lunit)
+    units = dunit**2*lunit**3
 
     rhos_   = convert_density(rhos,new_unit=dunit)
     rhosat_ = convert_density(rhosat,new_unit=dunit)
 
+    args = (rs,rhos_,rsat,rhosat_,rtrunc)
 
-    def integrand(r,rs,rhos,rsat,rhosat):
+    def integrand(r,rs,rhos,rsat,rhosat,rtrunc):
 
-        return NFW_profile(
-            r*lunit,rs,rhos,rsat,rhosat,length_unit=lunit
-        ).value**2
+        rhodm = NFW_profile(
+            r*lunit,rs,rhos,rsat,rhosat,rtrunc,length_unit=lunit
+        ).value
 
-    jfactor_01 = quad(
+        return r**2*rhodm**2
+
+    l_01 = quad(
         integrand,
         0,
         rsat.to(lunit).value,
-        args=(rs,rhos_,rsat,rhosat_)
+        args=args
     )[0]
 
-    jfactor_02 = quad(
+    l_02 = quad(
         integrand,
         rsat.to(lunit).value,
         rs.to(lunit).value,
-        args=(rs,rhos,rsat,rhosat)
+        args=args
     )[0]
 
-    jfactor_03 = quad(
+    l_03 = quad(
         integrand,
         rs.to(lunit).value,
         rmax.to(lunit).value,
-        args=(rs,rhos,rsat,rhosat)
+        args=args
     )[0]
 
-    return 4*np.pi*(jfactor_01+jfactor_02+jfactor_03)*units
+    return 4*np.pi*(l_01+l_02+l_03)*units
