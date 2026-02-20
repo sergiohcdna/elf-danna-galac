@@ -17,10 +17,10 @@ from astropy.constants import G
 from astropy.coordinates import SkyCoord
 from astropy.cosmology import FlatLambdaCDM
 
-from ..astrofactors.jfactor import jfactor_on_sphere_nfw
-from ..astrofactors.dfactor import dfactor_on_sphere_nfw
+from ..astrofactors.jfactor import luminosity_anna_nfw
+from ..astrofactors.dfactor import luminosity_decay_nfw
 from .concentrations import get_c,get_c_sub
-from .dmsource import get_rhosat,get_enclosed_mass_nfw
+from .dmsource import get_rhosat,get_enclosed_mass_nfw,NFW_profile
 from ..substructure.subhalos import msub_tot,nsub_tot,p_nsub_tot,nsub_r
 from ..tools.conversions import convert_mass,convert_density
 
@@ -118,9 +118,28 @@ class DMHalo():
         self._ra        = ra
         self._dec       = dec
         self._z         = z
-        self._r200      = r200.to(lunit)
         self._clabel    = clabel,
         self._m200      = convert_mass(m200,new_unit=u.Msun)
+
+        # We need to check that R200 is consistent with the value of M200
+        # We use M200 as the main halo parameter
+        r200_ = np.cbrt(3*self._m200/(800*np.pi*rhoc))
+
+        if r200_/r200 >= 0.01:
+            msg = (
+                f"Input R200 {r200:0.3f} will be inconsistent "
+                "with the rest of calculations.\n "
+                "Setting R200 to the value obtained using "
+                f"the critical density: {r200_:0.3f}"
+            )
+            logger.warning(msg)
+
+            self._r200 = r200_.to(lunit)
+
+        else:
+
+            self._r200 = r200.to(lunit)
+
         self._c200      = get_c(self._m200,clabel=clabel)
         self._rs        = self._r200/self._c200
         logterm         = np.log(1+self._c200)-self._c200/(1+self._c200)
@@ -131,8 +150,8 @@ class DMHalo():
         self._dmsigmav  = dmsigmav
         self._rhosat    = convert_density(rhosat,new_unit=dunit)
         self._rsat      = self._rs*(self._rhos/self._rhosat)
-        self._jfactor   = self.jfactor_sph()
-        self._dfactor   = self.dfactor_sph()
+        self._lanna     = self.get_lanna()
+        self._ldecay    = self.get_ldecay()
         self._fsub      = fsub
         self._indexpm   = index_pm
         self._sigmac    = sigma_c
@@ -142,18 +161,18 @@ class DMHalo():
 
         msg = (
             "Max. value of Sub halo masses can not be larger "
-            "than 1% of total cluster mass."
+            "than 1% of the total cluster mass."
         )
         if convert_mass(msub_max,new_unit=u.Msun) > 0.01*self._m200:
             logger.error(repr(SubHaloMassError(msg)))
 
         self._msub_max = convert_mass(msub_max,new_unit=u.Msun)
 
-        self._jfactorpp = (self._jfactor*(
+        self._lannapp = (self._lanna*(
             (1.0*u.M_sun).to(u.GeV,equivalencies=u.mass_energy())**2
-        )/u.M_sun**2).to(u.GeV**2/u.cm**5)
-        self._dfactorpp = (
-            self._dfactor.to(u.GeV/u.cm**2,equivalencies=u.mass_energy())
+        )/u.M_sun**2).to(u.GeV**2/u.cm**3)
+        self._ldecaypp = (
+            self._ldecay.to(u.GeV,equivalencies=u.mass_energy())
         )
 
         self._kw   = self.get_kw()
@@ -222,24 +241,24 @@ class DMHalo():
         return self._indexpm
 
     @property
-    def jfactor(self):
+    def l_dm_anna(self):
 
-        return self._jfactor
-
-    @property
-    def dfactor(self):
-
-        return self._dfactor
+        return self._lanna
 
     @property
-    def jfactor_pp(self):
+    def l_dm_decay(self):
 
-        return self._jfactorpp
+        return self._ldecay
 
     @property
-    def dfactor_pp(self):
+    def lanna_pp(self):
 
-        return self._dfactorpp
+        return self._lannapp
+
+    @property
+    def ldecay_pp(self):
+
+        return self._ldecaypp
 
     @property
     def nsubs(self):
@@ -277,7 +296,27 @@ class DMHalo():
         return self._coord.cartesian
 
     @property
+    def cM_host(self):
+
+        return self._clabel
+
+    @property
+    def cM_sub(self):
+
+        return self._csublabel
+
+    @property
+    def DMrhoLabel(self):
+
+        return self._dmprofile
+
+    @property
     def info(self):
+
+        ldma = self._lannapp*self._dmsigmav/self._dmmas
+        ldma = ldma.to(u.erg/u.s,equivalencies=u.mass_energy())
+        ldmd = self._ldecaypp/(1e27*u.s)
+        ldmd = ldmd.to(u.erg/u.s,equivalencies=u.mass_energy())
 
         msg = (
             f"\n{self._name} cluster configured with: \n"
@@ -297,13 +336,26 @@ class DMHalo():
             f" (from [{self._msub_min:0.3e},{self._msub_max:0.3e}])\n"
             f"\t- Total mass in form of subhalos: {self._msub:0.3e} "
             f"({self._fsub*100.0}% of the cluster mass)\n"
-            f"\t- (Spherical) Anna J factor [No sub]: {self._jfactor:0.3e} "
-            f"({self._jfactorpp:0.3e})\n"
-            f"\t- (Spherical) Decay D factor [No sub]: {self._dfactor:0.3e} "
-            f"({self._dfactorpp:0.3e})\n"
+            f"\t- Annihilation emissivity [No sub]: {self._lanna:0.3e} "
+            f"({self._lannapp:0.3e})\n"
+            f"\t- Decay emissivity [No sub]: {self._ldecay:0.3e} "
+            f"({self._ldecaypp:0.3e})\n"
+            f"\t- DM luminosity [Annihilation, No sub]: {ldma:0.5e}\n"
+            f"\t- DM luminosity [Decay, No sub]: {ldmd:0.5e}\n"
         )
 
         logger.info(msg)
+
+        msg = (
+            "For the annihilation luminosity a candiate with "
+            f"a mass {self._dmmas:0.2f} and thermal-average "
+            f"annihilation cross section {self._dmsigmav:0.2e} "
+            "were used. \n"
+            "For decay, the luminosity was estimated assuming a "
+            f"lifetime of 1.00e27 s."
+        )
+
+        logger.warning(msg)
 
         return
 
@@ -318,6 +370,7 @@ class DMHalo():
                 self._rhos,
                 self._rsat,
                 self._rhosat,
+                self._r200,
                 length_unit=self._rs.unit
             )
 
@@ -329,35 +382,45 @@ class DMHalo():
 
         return m200
 
-    def jfactor_sph(self):
+    def get_lanna(self) -> u.Quantity:
 
         if self._dmprofile.lower() == "nfw":
 
-            j_tot = jfactor_on_sphere_nfw(
-                self._r200,self._rs,self._rhos,self._rsat,self._rhosat
+            e_tot = luminosity_anna_nfw(
+                self._r200,
+                self._rs,
+                self._rhos,
+                self._rsat,
+                self._rhosat,
+                self._r200,
             )
 
         else:
 
             logger.error(repr(DMProfileError("Unknown DM profile")))
-            j_tot = 0*u.M_sun**2/u.Mpc**5
+            e_tot = 0*u.M_sun**2/u.Mpc**3
 
-        return j_tot
+        return e_tot
 
-    def dfactor_sph(self):
+    def get_ldecay(self) -> u.Quantity:
 
         if self._dmprofile.lower() == "nfw":
 
-            d_tot = dfactor_on_sphere_nfw(
-                self._r200,self._rs,self._rhos,self._rsat,self._rhosat
+            e_tot = luminosity_decay_nfw(
+                self._r200,
+                self._rs,
+                self._rhos,
+                self._rsat,
+                self._rhosat,
+                self._r200,
             )
 
         else:
 
             logger.error(repr(DMProfileError("Unknown DM profile")))
-            d_tot = 0*u.M_sun/u.Mpc**2
+            e_tot = 0*u.M_sun
 
-        return d_tot
+        return e_tot
 
     def c_subhalo(
         self,
@@ -542,3 +605,35 @@ class DMHalo():
             )*pnorm*nsubs
 
         return m1
+
+    def djdr(self,r:u.Quantity):
+
+        lunit = self._rs.unit
+
+        rho = NFW_profile(
+            r,
+            self._rs,
+            self._rhos,
+            self._rsat,
+            self._rhosat,
+            self._r200,
+            length_unit=lunit
+        )
+
+        return 4*np.pi*rho**2
+    
+    def dddr(self,r:u.Quantity):
+
+        lunit = self._rs.unit
+
+        rho = NFW_profile(
+            r,
+            self._rs,
+            self._rhos,
+            self._rsat,
+            self._rhosat,
+            self._r200,
+            length_unit=lunit
+        )
+
+        return 4*np.pi*rho
