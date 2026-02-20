@@ -2,6 +2,9 @@
 # Diffusion of electrons  in the intraclluster medium of galaxy clusters      #
 #   - Preparing DM profiles used for source injection                         #
 #   - Including units                                                         #
+#   - Replace list of parameters by DMHalo class                              #
+#   - Removing some functions                                                 #
+#   - Add a truncation radius to set densities to zero fi r > rtrunc          #
 #-----------------------------------------------------------------------------#
 #                      THE ELF-DANNA-GALAC Task force                         #
 #                      - Arlette Melo Galindo                                 #
@@ -9,6 +12,7 @@
 #                      - Sergio Hernández Cadena                              #
 #-----------------------------------------------------------------------------#
 #             December-2025                                                   #
+#             February-2026                                                   #
 ###############################################################################
 
 import astropy.units as u
@@ -18,6 +22,7 @@ from scipy.integrate import quad
 
 from crpropa import GridProperties,Vector3d,Grid1f
 from crpropa import DensityGrid
+from crpropa import Mpc,kpc,pc
 from crpropa import (
     Source,
     SourceMassDistribution,
@@ -28,9 +33,11 @@ from crpropa import (
     SourcePowerLawSpectrum,
 )
 
-from crpropa import Mpc
-
 from ..tools.conversions import convert_density,convert_mass
+
+from ..tools.customerrors import DMProfileError
+
+from loguru import logger
 
 # allowed_profiles = ["nfw","burkert","einasto"]
 allowed_profiles      = ["nfw"]
@@ -51,6 +58,7 @@ def NFW_profile(
     rhos        : u.Quantity,
     rsat        : u.Quantity,
     rhosat      : u.Quantity,
+    rtrunc      : u.Quantity,
     length_unit : u.Unit = u.Mpc
 ) -> u.Quantity:
 
@@ -83,6 +91,10 @@ def NFW_profile(
 
         density = rhosat
 
+    elif r.to(length_unit) > rtrunc.to(length_unit):
+
+        density = 0*(rhos.unit)
+
     else:
 
         density = rhos/(x*(1+x)**2)
@@ -90,16 +102,17 @@ def NFW_profile(
     return density
 
 def get_enclosed_mass_nfw(
-    r      : u.Quantity,
-    rs     : u.Quantity,
-    rhos   : u.Quantity,
-    rsat   : u.Quantity,
-    rhosat : u.Quantity,
+    r           : u.Quantity,
+    rs          : u.Quantity,
+    rhos        : u.Quantity,
+    rsat        : u.Quantity,
+    rhosat      : u.Quantity,
+    rtrunc      : u.Quantity,
     length_unit : u.Unit = u.Mpc
 ) -> u.Quantity:
 
     """
-    Total DM mass enclosed up to a radius r for an spherical 
+    Total DM mass enclosed up to a radius r for a spherical 
     halo with density described by the NFW profile.
 
     To apply the same operations through the different functions, 
@@ -137,12 +150,13 @@ def get_enclosed_mass_nfw(
     r_      = r.to(length_unit)
     rs_     = rs.to(length_unit)
     rsat_   = rsat.to(length_unit)
+    rtrunc_ = rtrunc.to(length_unit)
     rhos_   = convert_density(rhos,new_unit=u.Msun/length_unit**3)
     rhosat_ = convert_density(rhosat,new_unit=u.Msun/length_unit**3)
 
-    int_args = (rs_,rhos_,rsat_,rhosat_,length_unit)
+    int_args = (rs_,rhos_,rsat_,rhosat_,rtrunc_,length_unit)
 
-    def integrand(r_,rs,rhos,rsat,rhosat,length_unit=length_unit):
+    def integrand(r_,rs,rhos,rsat,rhosat,rtrunc,length_unit=length_unit):
 
         dm = (r_*length_unit)**2*NFW_profile(
             r_*length_unit,
@@ -150,6 +164,7 @@ def get_enclosed_mass_nfw(
             rhos,
             rsat,
             rhosat,
+            rtrunc,
             length_unit=length_unit
         )
 
@@ -213,74 +228,55 @@ def get_enclosed_mass_nfw(
 
     return 4*np.pi*total_mass*u.Msun
 
-def dm_number_density(
-    r       : float,
-    dmpars  : list[float]|np.ndarray,
-    dm_mass : float=5.,
-    label   : str="nfw"
-) -> float:
+# def dm_mass_density(
+#     r    : u.Quantity,
+#     halo : DMHalo
+# ) -> u.Quantity:
 
-    """
-    Get the number/particle density. Again, by default any self-consistent 
-    set of units should work, but for now, we assume TeV/m**3 for mass density 
-    and particles/m**3 for particle density.
-    ToDo: Include units?
+#     """
+#     Get the mass density. The density is computed in Units of 
+#     u.Msun/(DMHalo.rs.unit)**3. We use now the DMHalo class 
+#     because it is easy to access to all the parameters 
+#     needed to compute the DMDensity at some distance r.
+#     After initialization of the DMHalo object, all the units 
+#     have been checked and properly converted, so we do not need 
+#     to add more conversions. We set the truncation radius to 
+#     $R_{200}$.
     
-    :param r: Radius to the center of the DM halo
-    :type r: float
-    :param dmpars: List or array of parameters to get mass density
-    :type dmpars: list[float] | np.ndarray
-    :param dm_mass: Mass of the WIMP DM candidate. Default is 5
-    :type dm_mass: float
-    :param label: Name of the profile used. Default is NFW
-    :type label: str
-    """
+#     :param r: Radius to the center of the DM halo
+#     :type r: float
+#     :param halo: Spherical DM halo
+#     :type halo: DMHalo
+#     """
 
-    if label.lower() == "nfw":
+#     if halo.DMrhoLabel.lower() == "nfw":
 
-        r_s,rho_s,r_sat,rho_sat = dmpars
+#         density = NFW_profile(
+#             r.to(halo.rs.unit),
+#             halo.rs,
+#             halo.rhos,
+#             halo.r_sat,
+#             halo.rho_sat,
+#             halo.r200,
+#             length_unit=halo.rs.unit
+#         )
 
-        density = NFW_profile(r,r_s,rho_s,r_sat,rho_sat)
+#     else:
 
-    number_rho = density/dm_mass
+#         logger.error(DMProfileError(f"Unknown {halo.DMrhoLabel} Profile"))
 
-    return number_rho
-
-def dm_mass_density(
-    r       : float,
-    dmpars  : list[float]|np.ndarray,
-    label   : str="nfw"
-) -> float:
-
-    """
-    Get the number/particle density. Again, by default any self-consistent 
-    set of units should work, but for now, we assume TeV/m**3 for mass density 
-    and particles/m**3 for particle density.
-    ToDo: Include units?
-    
-    :param r: Radius to the center of the DM halo
-    :type r: float
-    :param dmpars: List or array of parameters to get mass density
-    :type dmpars: list[float] | np.ndarray
-    :param label: Name of the profile used. Default is NFW
-    :type label: str
-    """
-
-    if label.lower() == "nfw":
-
-        r_s,rho_s,r_sat,rho_sat = dmpars
-
-        density = NFW_profile(r,r_s,rho_s,r_sat,rho_sat)
-
-    return density
+#     return density
 
 def SmoothDMHaloMassDensityGrid(
-    dmhalo_center  : Vector3d,
-    origin_lower   : Vector3d,
+    dmhalo_center  : u.Quantity,
+    obs_radius     : u.Quantity,
     ncells         : int,
-    spacing        : float,
-    dmpars         : list[float]|np.ndarray,
-    dmprofile      : str="nfw"
+    rs             : u.Quantity,
+    rhos           : u.Quantity,
+    rsat           : u.Quantity,
+    rhosat         : u.Quantity,
+    chunksize      : int = 32,
+    dmprofile      : str = "nfw"
     # save           : bool=False
 ) -> DensityGrid:
     """
@@ -322,48 +318,97 @@ def SmoothDMHaloMassDensityGrid(
     :return: Grid of DM mass density [TeV/m**3]
     :rtype: DensityGrid
     """
-    msg = "Unknown mass density profile"
-    assert dmprofile in allowed_profiles,msg
 
-    # rho_max = 5e+3
+    # We use the units of the scale radius as a natural choice
+    # to compare and convert between the different units
 
-    # Checking the number of parameters
-    if dmprofile.lower() == "nfw":
+    # As you can see, I am not checking the dimension of the arrays
 
-        msg = "Wrong number of parameters for the NFW profile"
-        assert len(dmpars) == 4,msg
+    if dmprofile not in allowed_profiles:
+        logger.error(f"Unknown DM profile {dmprofile}")
 
-        rho_max = dmpars[-1]
+    lunit   = rs.unit
+    halo_c  = dmhalo_center.to(lunit)
+    obs_r   = obs_radius.to(lunit)
+    box_or  = halo_c - obs_r
+    box_f   = halo_c + obs_r
+    step    = 2*obs_r/ncells
+    rsat_   = rsat.to(lunit)
+    rhos_   = convert_density(rhos,u.Msun/lunit**3)
+    rhosat_ = convert_density(rhosat,u.Msun/lunit**3)
 
-    gridpos = GridProperties(origin_lower*Mpc,ncells,spacing*Mpc)
+    xs = np.arange(box_or[0].value,box_f[0].value,step=step.value)
+    ys = np.arange(box_or[1].value,box_f[1].value,step=step.value)
+    zs = np.arange(box_or[2].value,box_f[2].value,step=step.value)
+
+    # Now, we precompute the values of the density with numpy
+    # We also aply a mask to set to zero all the values beyond
+    # the observer radius
+
+    rho_     = np.zeros((xs.size,ys.size,zs.size))
+    distance = np.zeros((xs.size,ys.size,zs.size))
+
+    for i in range(0,ncells,chunksize):
+
+        istop  = np.min([i+chunksize,ncells])
+        xsmall = xs[i:istop]
+
+        for j in range(0,ncells,chunksize):
+
+            jstop  = np.min([j+chunksize,ncells])
+            ysmall = ys[j:jstop]
+
+            for k in range(0,ncells,chunksize):
+
+                kstop  = np.min([k+chunksize,ncells])
+                zsmall = zs[k:kstop]
+
+                Xchunk = xsmall[:,None,None]
+                Ychunk = ysmall[None,:,None]
+                Zchunk = zsmall[None,None,:]
+
+                r = (
+                    (Xchunk - halo_c[0].value)**2 + 
+                    (Ychunk - halo_c[1].value)**2 + 
+                    (Zchunk - halo_c[2].value)**2
+                )
+
+                distance[i:istop,j:jstop,k:kstop] = np.sqrt(r)
+                rho_[i:istop,j:jstop,k:kstop]     = NFW_profile(
+                    r,
+                    rs,
+                    rhos_,
+                    rsat_,
+                    rhosat_,
+                    length_unit=lunit
+                )
+
+    mask = ~(distance > obs_r.value)
+    rho_ = rho_*mask
+
+    # Because CRpropa use SI unit system
+    # We convert length quantities to meters
+    # and forget about multiplying by dimension factors
+    # as we handle all the operations with astropy.units
+    box = Vector3d(
+        box_or[0].to(u.m).value,
+        box_or[1].to(u.m).value,
+        box_or[2].to(u.m).value
+    )
+
+    gridpos = GridProperties(box,ncells,step.to(u.m).value)
     gridpos.setClipVolume(True)
 
+    # Then, we only to assign the values to the CRpropa grid
     dm_density = Grid1f(gridpos)
 
-    for idx in range(ncells):
+    for idx in range(gridpos.Nx):
 
-        for idy in range(ncells):
+        for idy in range(gridpos.Ny):
 
-            for idz in range(ncells):
-
-                dummyvec = Vector3d(idx,idy,idz)
-                dummyvec = dummyvec*spacing + origin_lower
-                dummyvec = dummyvec - dmhalo_center
-                distance = np.sqrt(
-                    dummyvec.x**2+dummyvec.y**2+dummyvec.z**2
-                )
-
-                rho = dm_mass_density(
-                    distance,
-                    dmpars,
-                    label=dmprofile
-                )
+            for idz in range(gridpos.Nz):
 
                 dm_density.setValue(idx,idy,idz,rho/rho_max)
-
-                if distance > 2.0:
-
-                    dm_density.setValue(idx,idy,idz,0)
 
     dens = DensityGrid(dm_density,True,False,False)
 
