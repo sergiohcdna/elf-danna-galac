@@ -72,36 +72,36 @@ def p_nsub_tot(
     we can define de range [1,exp(ln(c_mean)+8*sigma_c)] 
     Please note that the probabilities are not separable
     
-    :param c_sub: Concentration of DM subhalo
-    :type c_sub: float
-    :param mass_halo: Mass of DM subhalo
-    :type mass_halo: u.Quantity
-    :param r: Distance to the center of the host halo
-    :type r: u.Quantity
-    :param rs: Scale radius of the host halo
-    :type rs: u.Quantity
-    :param rhos: Scale density of the host halo
-    :type rhos: u.Quantity
-    :param rsat: Saturation radius of the host halo
-    :type rsat: u.Quantity
-    :param rhosat: Saturation density of the host halo
-    :type rhosat: u.Quantity
-    :param r200: R200 of the host halo
-    :type r200: u.Quantity
-    :param m200: M200 of the host halo
-    :type m200: u.Quantity
-    :param sigma_c: Width of the dn/dc distribution [default is 0.13]
-    :type sigma_c: float
-    :param index: Index of the SHMF (dn/dm) [default is -1.9]
-    :type index: float
-    :param norm: Normalization of the SHMF (dn/dm) [default is 1]
-    :type norm: float
-    :param h: Reduced Hubble constant H0/100 [default is 0.71]
-    :type h: float | None
-    :param clabel: Label of c-M relation [default is moline2017]
-    :type clabel: str
-    :return: p(n_sub|r,m,c) [1/mass/distance**3]
-    :rtype: Quantity
+        :param c_sub: Concentration of DM subhalo
+        :type c_sub: float
+        :param mass_halo: Mass of DM subhalo
+        :type mass_halo: u.Quantity
+        :param r: Distance to the center of the host halo
+        :type r: u.Quantity
+        :param rs: Scale radius of the host halo
+        :type rs: u.Quantity
+        :param rhos: Scale density of the host halo
+        :type rhos: u.Quantity
+        :param rsat: Saturation radius of the host halo
+        :type rsat: u.Quantity
+        :param rhosat: Saturation density of the host halo
+        :type rhosat: u.Quantity
+        :param r200: R200 of the host halo
+        :type r200: u.Quantity
+        :param m200: M200 of the host halo
+        :type m200: u.Quantity
+        :param sigma_c: Width of the dn/dc distribution [default is 0.13]
+        :type sigma_c: float
+        :param index: Index of the SHMF (dn/dm) [default is -1.9]
+        :type index: float
+        :param norm: Normalization of the SHMF (dn/dm) [default is 1]
+        :type norm: float
+        :param h: Reduced Hubble constant H0/100 [default is 0.71]
+        :type h: float | None
+        :param clabel: Label of c-M relation [default is moline2017]
+        :type clabel: str
+        :return: p(n_sub|r,m,c) [1/mass/distance**3]
+        :rtype: Quantity
     """
 
 
@@ -135,38 +135,38 @@ def msub_tot(
     Computes the total mass in form of subhalos 
     located in the spherical shell between rmin and rmax.
     
-    :param rmin: Minimum radius
-    :type rmin: u.Quantity
-    :param rmax: Maximum radius
-    :type rmax: u.Quantity
-    :param msub_min: Minimum mass of the dm subhalos
-    :type msub_min: u.Quantity
-    :param msub_max: Maximum mass of the dm subhalos
-    :type msub_max: u.Quantity
-    :param rs: Scale radius of the host halo
-    :type rs: u.Quantity
-    :param rhos: Scale density ot the host halo
-    :type rhos: u.Quantity
-    :param rsat: Saturation radius of the host halo
-    :type rsat: u.Quantity
-    :param rhosat: Saturation radius of the host halo
-    :type rhosat: u.Quantity
-    :param r200: R200 of the host halo
-    :type r200: u.Quantity
-    :param m200: M200 of the host halo
-    :type m200: u.Quantity
-    :param sigma_c: Width of the dn/dc distribution [default is 0.13]
-    :type sigma_c: float
-    :param index: Index of the SHMF (dn/dm) [default is -1.9]
-    :type index: float
-    :param norm: Normalization of the SHMF (dn/dm) [default is 1]
-    :type norm: float
-    :param h: Reduced Hubble constant H0/100 [default is 0.71]
-    :type h: float | None
-    :param clabel: Label of c-M relation [default is moline2017]
-    :type clabel: str
-    :return: Total mass in form of subhalos
-    :rtype: Quantity
+        :param rmin: Minimum radius
+        :type rmin: u.Quantity
+        :param rmax: Maximum radius
+        :type rmax: u.Quantity
+        :param msub_min: Minimum mass of the dm subhalos
+        :type msub_min: u.Quantity
+        :param msub_max: Maximum mass of the dm subhalos
+        :type msub_max: u.Quantity
+        :param rs: Scale radius of the host halo
+        :type rs: u.Quantity
+        :param rhos: Scale density ot the host halo
+        :type rhos: u.Quantity
+        :param rsat: Saturation radius of the host halo
+        :type rsat: u.Quantity
+        :param rhosat: Saturation radius of the host halo
+        :type rhosat: u.Quantity
+        :param r200: R200 of the host halo
+        :type r200: u.Quantity
+        :param m200: M200 of the host halo
+        :type m200: u.Quantity
+        :param sigma_c: Width of the dn/dc distribution [default is 0.13]
+        :type sigma_c: float
+        :param index: Index of the SHMF (dn/dm) [default is -1.9]
+        :type index: float
+        :param norm: Normalization of the SHMF (dn/dm) [default is 1]
+        :type norm: float
+        :param h: Reduced Hubble constant H0/100 [default is 0.71]
+        :type h: float | None
+        :param clabel: Label of c-M relation [default is moline2017]
+        :type clabel: str
+        :return: Total mass in form of subhalos
+        :rtype: Quantity
     """
 
     lunit = rs.unit
@@ -288,38 +288,38 @@ def nsub_tot(
     normalization factors for the total subhalo PDFs. Then, 
     we are just interested in the value of the integral.
     
-    :param rmin: Minimum radius
-    :type rmin: u.Quantity
-    :param rmax: Maximum radius
-    :type rmax: u.Quantity
-    :param msub_min: Minimum mass of the dm subhalos
-    :type msub_min: u.Quantity
-    :param msub_max: Maximum mass of the dm subhalos
-    :type msub_max: u.Quantity
-    :param rs: Scale radius of the host halo
-    :type rs: u.Quantity
-    :param rhos: Scale density ot the host halo
-    :type rhos: u.Quantity
-    :param rsat: Saturation radius of the host halo
-    :type rsat: u.Quantity
-    :param rhosat: Saturation radius of the host halo
-    :type rhosat: u.Quantity
-    :param r200: R200 of the host halo
-    :type r200: u.Quantity
-    :param m200: M200 of the host halo
-    :type m200: u.Quantity
-    :param sigma_c: Width of the dn/dc distribution [default is 0.13]
-    :type sigma_c: float
-    :param index: Index of the SHMF (dn/dm) [default is -1.9]
-    :type index: float
-    :param norm: Normalization of the SHMF (dn/dm) [default is 1]
-    :type norm: float
-    :param h: Reduced Hubble constant H0/100 [default is 0.71]
-    :type h: float | None
-    :param clabel: Label of c-M relation [default is moline2017]
-    :type clabel: str
-    :return: Total number of subhalos
-    :rtype: float
+        :param rmin: Minimum radius
+        :type rmin: u.Quantity
+        :param rmax: Maximum radius
+        :type rmax: u.Quantity
+        :param msub_min: Minimum mass of the dm subhalos
+        :type msub_min: u.Quantity
+        :param msub_max: Maximum mass of the dm subhalos
+        :type msub_max: u.Quantity
+        :param rs: Scale radius of the host halo
+        :type rs: u.Quantity
+        :param rhos: Scale density ot the host halo
+        :type rhos: u.Quantity
+        :param rsat: Saturation radius of the host halo
+        :type rsat: u.Quantity
+        :param rhosat: Saturation radius of the host halo
+        :type rhosat: u.Quantity
+        :param r200: R200 of the host halo
+        :type r200: u.Quantity
+        :param m200: M200 of the host halo
+        :type m200: u.Quantity
+        :param sigma_c: Width of the dn/dc distribution [default is 0.13]
+        :type sigma_c: float
+        :param index: Index of the SHMF (dn/dm) [default is -1.9]
+        :type index: float
+        :param norm: Normalization of the SHMF (dn/dm) [default is 1]
+        :type norm: float
+        :param h: Reduced Hubble constant H0/100 [default is 0.71]
+        :type h: float | None
+        :param clabel: Label of c-M relation [default is moline2017]
+        :type clabel: str
+        :return: Total number of subhalos
+        :rtype: float
     """
 
     lunit = rs.unit
@@ -379,7 +379,7 @@ def nsub_tot(
 
         c_mean = get_c_sub(
             m*u.M_sun,
-            r*u.Mpc,
+            r*lunit,
             r200_,
             h=h,
             clabel=clabel
@@ -446,36 +446,36 @@ def nsub_r(
 
     For a proper implementation you can refer to the DMHalo class
     
-    :param rmin: Radial distance to the center of the host halo
-    :type rmin: u.Quantity
-    :param msub_min: Minimum mass of the dm subhalos
-    :type msub_min: u.Quantity
-    :param msub_max: Maximum mass of the dm subhalos
-    :type msub_max: u.Quantity
-    :param rs: Scale radius of the host halo
-    :type rs: u.Quantity
-    :param rhos: Scale density ot the host halo
-    :type rhos: u.Quantity
-    :param rsat: Saturation radius of the host halo
-    :type rsat: u.Quantity
-    :param rhosat: Saturation radius of the host halo
-    :type rhosat: u.Quantity
-    :param r200: R200 of the host halo
-    :type r200: u.Quantity
-    :param m200: M200 of the host halo
-    :type m200: u.Quantity
-    :param sigma_c: Width of the dn/dc distribution [default is 0.13]
-    :type sigma_c: float
-    :param index: Index of the SHMF (dn/dm) [default is -1.9]
-    :type index: float
-    :param norm: Normalization of the SHMF (dn/dm) [default is 1]
-    :type norm: float
-    :param h: Reduced Hubble constant H0/100 [default is 0.71]
-    :type h: float | None
-    :param clabel: Label of c-M relation [default is moline2017]
-    :type clabel: str
-    :return: subhalo numeric density
-    :rtype: float
+        :param r: Radial distance to the center of the host halo
+        :type r: u.Quantity
+        :param msub_min: Minimum mass of the dm subhalos
+        :type msub_min: u.Quantity
+        :param msub_max: Maximum mass of the dm subhalos
+        :type msub_max: u.Quantity
+        :param rs: Scale radius of the host halo
+        :type rs: u.Quantity
+        :param rhos: Scale density ot the host halo
+        :type rhos: u.Quantity
+        :param rsat: Saturation radius of the host halo
+        :type rsat: u.Quantity
+        :param rhosat: Saturation radius of the host halo
+        :type rhosat: u.Quantity
+        :param r200: R200 of the host halo
+        :type r200: u.Quantity
+        :param m200: M200 of the host halo
+        :type m200: u.Quantity
+        :param sigma_c: Width of the dn/dc distribution [default is 0.13]
+        :type sigma_c: float
+        :param index: Index of the SHMF (dn/dm) [default is -1.9]
+        :type index: float
+        :param norm: Normalization of the SHMF (dn/dm) [default is 1]
+        :type norm: float
+        :param h: Reduced Hubble constant H0/100 [default is 0.71]
+        :type h: float | None
+        :param clabel: Label of c-M relation [default is moline2017]
+        :type clabel: str
+        :return: subhalo numeric density
+        :rtype: float
     """
 
     lunit = rs.unit
