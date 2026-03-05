@@ -22,7 +22,6 @@ from scipy.integrate import quad
 
 from crpropa import GridProperties,Vector3d,Grid1f
 from crpropa import DensityGrid
-from crpropa import Mpc,kpc,pc
 from crpropa import (
     Source,
     SourceMassDistribution,
@@ -32,6 +31,7 @@ from crpropa import (
     SourceParticleType,
     SourcePowerLawSpectrum,
 )
+# from crpropa import TRICUBIC
 
 from ..tools.conversions import convert_density,convert_mass
 
@@ -43,7 +43,22 @@ from loguru import logger
 allowed_profiles      = ["nfw"]
 allowed_spatial_types = ["pointlike","extended_smooth"]
 
-def get_rhosat(dmmass:u.Quantity,sigmav:u.Quantity):
+def get_rhosat(dmmass:u.Quantity,sigmav:u.Quantity)->u.Quantity:
+
+    """
+    Compute the saturation density. We use the formula given in:
+    https://clumpy.gitlab.io/CLUMPY/v3.1.1/physics_profiles.html:
+
+    $\rhosat = 3\times10^{18} \times (10^-26 / \langle\sigma v\rangle)~M_\odot~kpc^{-3}.$
+
+    :param dmmass: Mass of the DM candidate
+    :type dmmass: u.Quantity
+    :param sigmav: Thermal-average annihilation cross section
+    :type sigmav: u.Quantity
+    :return: Saturation density
+    :rtype: u.Quantity
+    
+    """
 
     dmm = convert_mass(dmmass,new_unit=u.GeV)
     sv  = sigmav.to(u.cm**3/u.s)
@@ -66,38 +81,67 @@ def NFW_profile(
     Calculation of the mass density profile for a 
     NFW profile. Different to other cases, we need to include 
     a saturation radius to avoid divergence at the origin.  
-    We include units, but any unit conversion 
-    can be done in other functions. 
+    We include units.
+
+    The function supports to work either with Quantities of 
+    dimension 1 (float) or dimension greater than 2 (arrays). 
+    The case for arrays is used during grid computation.
     
     :param r: Distance to the center of the DM halo
     :type r: u.Quantity
-    :param r_s: Scale radius of the DM halo
-    :type r_s: u.Quantity
-    :param rho_s: Density at the scale radius
-    :type rho_s: u.Quantity
-    :param r_sat: Radius where saturation density is reached
-    :type r_sat: u.Quantity
-    :param rho_sat: Saturation density
-    :type rho_sat: u.Quantity
+    :param rs: Scale radius of the DM halo
+    :type rs: u.Quantity
+    :param rhos: Density at the scale radius
+    :type rhos: u.Quantity
+    :param rsat: Radius where saturation density is reached
+    :type rsat: u.Quantity
+    :param rhosat: Saturation density
+    :type rhosat: u.Quantity
+    :param rtrunc: Truncation radius
+    :type rtrunc: u.Quantity
     :param length_unit: Unit for distance comparison [default= u.Mpc]
     type length_unit: u.Unit
-    :return: profile of mass density
+    :return: DM mass density
     :rtype: u.Quantity
     """
 
-    x = r.to(length_unit)/rs.to(length_unit)
+    if r.shape == ():
 
-    if r.to(length_unit) <= rsat.to(length_unit):
+        # this is for the scalar part
 
-        density = rhosat
+        x = r.to(length_unit)/rs.to(length_unit)
 
-    elif r.to(length_unit) > rtrunc.to(length_unit):
+        if r.to(length_unit) <= rsat.to(length_unit):
 
-        density = 0*(rhos.unit)
+            density = rhosat
+
+        elif r.to(length_unit) > rtrunc.to(length_unit):
+
+            density = 0*(rhos.unit)
+
+        else:
+
+            density = rhos/(x*(1+x)**2)
 
     else:
 
-        density = rhos/(x*(1+x)**2)
+        # this is for the array
+
+        density = u.Quantity(np.zeros(r.shape),unit=rhos.unit)
+        
+        inner = r.to(length_unit) <= rsat.to(length_unit)
+        inter = np.logical_and(
+            r.to(length_unit) > rsat.to(length_unit), 
+            r.to(length_unit) <= rtrunc.to(length_unit)
+        )
+
+        density[inner] = rhosat
+
+        if np.any(inter):
+
+            x = r[inter].to(length_unit) / rs.to(length_unit)
+
+            density[inter] = rhos/(x*(1+x)**2)
 
     return density
 
@@ -117,7 +161,7 @@ def get_enclosed_mass_nfw(
 
     To apply the same operations through the different functions, 
     I will split the integral in the three different ranges as 
-    for the calculation of the jfactor/dfactor.
+    for the calculation of the jfactor/dfactor  .
     This is only to include the term close to the saturation radius 
     where the density has a peak. 
     Again, this is only particular to the case of NFW profile. 
@@ -141,6 +185,8 @@ def get_enclosed_mass_nfw(
     :type rsat: u.Quantity
     :param rhosat: Saturation density
     :type rhosat: u.Quantity
+    :param rtrunc: Truncation radius
+    :type rtrunc: u.Quantity
     :param length_unit: Unit for distance comparison [default= u.Mpc]
     :type length_unit: u.Unit
     :return: Total enclosed DM mass
@@ -228,44 +274,56 @@ def get_enclosed_mass_nfw(
 
     return 4*np.pi*total_mass*u.Msun
 
-# def dm_mass_density(
-#     r    : u.Quantity,
-#     halo : DMHalo
-# ) -> u.Quantity:
+def dm_mass_density(
+    r         : u.Quantity,
+    rs        : u.Quantity,
+    rhos      : u.Quantity,
+    rsat      : u.Quantity,
+    rhosat    : u.Quantity,
+    rtrunc    : u.Quantity,
+    dmprofile : str = "nfw",
+) -> u.Quantity:
 
-#     """
-#     Get the mass density. The density is computed in Units of 
-#     u.Msun/(DMHalo.rs.unit)**3. We use now the DMHalo class 
-#     because it is easy to access to all the parameters 
-#     needed to compute the DMDensity at some distance r.
-#     After initialization of the DMHalo object, all the units 
-#     have been checked and properly converted, so we do not need 
-#     to add more conversions. We set the truncation radius to 
-#     $R_{200}$.
-    
-#     :param r: Radius to the center of the DM halo
-#     :type r: float
-#     :param halo: Spherical DM halo
-#     :type halo: DMHalo
-#     """
+    """
+    Get the mass density. The density is computed in Units of 
+    u.Msun/(rs.unit)**3. We set the truncation radius to 
+    $R_{200}$.
 
-#     if halo.DMrhoLabel.lower() == "nfw":
+    :param r: Distance from the center of the DM halo
+    :type r: u.Quantity
+    :param rs: Scale radius
+    :type rs: u.Quantity
+    :param rhos: Scale density
+    :type rhos: u.Quantity
+    :param rsat: Saturation radius
+    :type rsat: u.Quantity
+    :param rhosat: Saturation density
+    :type rhosat: u.Quantity
+    :param rtrunc: Truncation radius
+    :type rtrunc: u.Quantity
+    :param dmprofile: Label of the DM profile
+    :type dmprofile: str
+    :return: DM density
+    :rtype: Quantity
+    """
 
-#         density = NFW_profile(
-#             r.to(halo.rs.unit),
-#             halo.rs,
-#             halo.rhos,
-#             halo.r_sat,
-#             halo.rho_sat,
-#             halo.r200,
-#             length_unit=halo.rs.unit
-#         )
+    if dmprofile.lower() == "nfw":
 
-#     else:
+        density = NFW_profile(
+            r.to(rs.unit),
+            rs,
+            rhos,
+            rsat,
+            rhosat,
+            rtrunc,
+            length_unit=rs.unit
+        )
 
-#         logger.error(DMProfileError(f"Unknown {halo.DMrhoLabel} Profile"))
+    else:
 
-#     return density
+        logger.error(DMProfileError(f"Unknown {dmprofile} Profile"))
+
+    return density
 
 def SmoothDMHaloMassDensityGrid(
     dmhalo_center  : u.Quantity,
@@ -275,16 +333,21 @@ def SmoothDMHaloMassDensityGrid(
     rhos           : u.Quantity,
     rsat           : u.Quantity,
     rhosat         : u.Quantity,
+    rtrunc         : u.Quantity,
+    total_mass     : u.Quantity,
     chunksize      : int = 32,
     dmprofile      : str = "nfw"
     # save           : bool=False
 ) -> DensityGrid:
-    """
-    Get a Grid1f with the mass density of DM. 
-    The density is computed in units of TeV/m**3.
+    
+    r"""
+    Get a Grid1f with a PDF for sampling position following the 
+    DM density in a spherical halo. The PDF is normalized by 
+    the decay luminosity (Total enclosed mass):
+
+    $PDF = \frac{\rho(r)}{\mathfrak{L}_\text{Dec}}$
 
     All vectors are given in the Observer's coordinate system (OCS). 
-    All spatial quantities are assumed to be in Mpc.
 
     For the Grid1f we assume the same number of cells in each direction.
     As for now, we need to specify what is the type of gas density used 
@@ -295,28 +358,38 @@ def SmoothDMHaloMassDensityGrid(
     actually care about this, as we are only using this as a source 
     sampling function.
 
-    This gonna take a while.
-
-    Then, I will normalize by the maximum density to directly get a 
+    Then, we normalize by the total mass to directly get a 
     mass distribution function normalized to one, and check if that 
-    can accelerate the computation time. For the case of the NFW profile, 
-    the maximum density should be the saturation density. Need to check 
-    for the others DM halo profiles.
-    
-    :param cluster_center: Center of the cluster in the OCS. [Mpc]
-    :type cluster_center: Vector3d
-    :param origin_lower: Lower origin of the grid. [Mpc]
-    :type origin_lower: Vector3d
-    :param ncells: Number of cells used to get the grid
-    :type ncells: int
-    :param spacing: Separation between cells.[Mpc]
-    :type spacing: float
-    :param dmpars: Parameters to describe the DM mass density profile
-    :type dmpars: list[float] | np.ndarray
-    :param dmprofile: Name of DM profile used
-    :type dmprofile: str
-    :return: Grid of DM mass density [TeV/m**3]
-    :rtype: DensityGrid
+    can accelerate the computation time.
+
+    We ask for an odd number of cells to make sure that the center of 
+    the DM halo is an actual point (vertice) of the grid. This is to do 
+    a correct source sampling.
+
+        :param dmhalo_center: Center of the DM halo
+        :type dmhalo_center: u.Quantity
+        :param obs_radius: Radius of the observer/halo $R_{200}$
+        :type obs_radius: u.Quantity
+        :param ncells: [Odd] Number of cells
+        :type ncells: int
+        :param rs: Scale radius
+        :type rs: u.Quantity
+        :param rhos: Scale density
+        :type rhos: u.Quantity
+        :param rsat: Saturation radius
+        :type rsat: u.Quantity
+        :param rhosat: Saturation Density
+        :type rhosat: u.Quantity
+        :param rtrunc: Truncation radius
+        :type rtrunc: u.Quantity
+        :param total_mass: Total mass of the DM halo
+        :type total_mass: u.Quantity
+        :param chunksize: Number of points to compute per chunk
+        :type chunksize: int
+        :param dmprofile: Label of the DM density profile
+        :type dmprofile: str
+        :return: PDF Grid for decaying DM
+        :rtype: DensityGrid
     """
 
     # We use the units of the scale radius as a natural choice
@@ -324,29 +397,28 @@ def SmoothDMHaloMassDensityGrid(
 
     # As you can see, I am not checking the dimension of the arrays
 
-    if dmprofile not in allowed_profiles:
-        logger.error(f"Unknown DM profile {dmprofile}")
-
     lunit   = rs.unit
     halo_c  = dmhalo_center.to(lunit)
     obs_r   = obs_radius.to(lunit)
     box_or  = halo_c - obs_r
     box_f   = halo_c + obs_r
-    step    = 2*obs_r/ncells
+    step    = 2*obs_r/(ncells-1)
     rsat_   = rsat.to(lunit)
+    rtrunc_ = rtrunc.to(lunit)
     rhos_   = convert_density(rhos,u.Msun/lunit**3)
     rhosat_ = convert_density(rhosat,u.Msun/lunit**3)
+    mass    = total_mass.to(u.Msun,equivalencies=u.mass_energy())
 
-    xs = np.arange(box_or[0].value,box_f[0].value,step=step.value)
-    ys = np.arange(box_or[1].value,box_f[1].value,step=step.value)
-    zs = np.arange(box_or[2].value,box_f[2].value,step=step.value)
+    # xs = np.arange(box_or[0].value,box_f[0].value,step=step.value)
+    # ys = np.arange(box_or[1].value,box_f[1].value,step=step.value)
+    # zs = np.arange(box_or[2].value,box_f[2].value,step=step.value)
+    xs = np.linspace(box_or[0].value,box_f[0].value,num=ncells)
+    ys = np.linspace(box_or[1].value,box_f[1].value,num=ncells)
+    zs = np.linspace(box_or[2].value,box_f[2].value,num=ncells)
 
     # Now, we precompute the values of the density with numpy
-    # We also aply a mask to set to zero all the values beyond
-    # the observer radius
 
-    rho_     = np.zeros((xs.size,ys.size,zs.size))
-    distance = np.zeros((xs.size,ys.size,zs.size))
+    rho_ = np.zeros((xs.size,ys.size,zs.size))
 
     for i in range(0,ncells,chunksize):
 
@@ -367,24 +439,23 @@ def SmoothDMHaloMassDensityGrid(
                 Ychunk = ysmall[None,:,None]
                 Zchunk = zsmall[None,None,:]
 
-                r = (
+                r = np.sqrt(
                     (Xchunk - halo_c[0].value)**2 + 
                     (Ychunk - halo_c[1].value)**2 + 
                     (Zchunk - halo_c[2].value)**2
-                )
+                )*lunit
 
-                distance[i:istop,j:jstop,k:kstop] = np.sqrt(r)
-                rho_[i:istop,j:jstop,k:kstop]     = NFW_profile(
+                rho_[i:istop,j:jstop,k:kstop] = dm_mass_density(
                     r,
                     rs,
                     rhos_,
                     rsat_,
                     rhosat_,
-                    length_unit=lunit
-                )
+                    rtrunc_,
+                    dmprofile=dmprofile,
+                ).value
 
-    mask = ~(distance > obs_r.value)
-    rho_ = rho_*mask
+    rho_    = rho_/mass.value
 
     # Because CRpropa use SI unit system
     # We convert length quantities to meters
@@ -399,7 +470,7 @@ def SmoothDMHaloMassDensityGrid(
     gridpos = GridProperties(box,ncells,step.to(u.m).value)
     gridpos.setClipVolume(True)
 
-    # Then, we only to assign the values to the CRpropa grid
+    # Then, we only need to assign the values to the CRpropa grid
     dm_density = Grid1f(gridpos)
 
     for idx in range(gridpos.Nx):
@@ -408,27 +479,36 @@ def SmoothDMHaloMassDensityGrid(
 
             for idz in range(gridpos.Nz):
 
-                dm_density.setValue(idx,idy,idz,0)
+                dm_density.setValue(idx,idy,idz,rho_[idx,idy,idz])
+
+    # dm_density.setInterpolationType(TRICUBIC)
 
     dens = DensityGrid(dm_density,True,False,False)
 
     return dens
 
 def SmoothDMHaloMassSquaredDensityGrid(
-    dmhalo_center  : Vector3d,
-    origin_lower   : Vector3d,
+    dmhalo_center  : u.Quantity,
+    obs_radius     : u.Quantity,
     ncells         : int,
-    spacing        : float,
-    dmpars         : list[float]|np.ndarray,
-    dmprofile      : str="nfw"
+    rs             : u.Quantity,
+    rhos           : u.Quantity,
+    rsat           : u.Quantity,
+    rhosat         : u.Quantity,
+    rtrunc         : u.Quantity,
+    total_dmlum    : u.Quantity,
+    chunksize      : int = 32,
+    dmprofile      : str = "nfw"
     # save           : bool=False
 ) -> DensityGrid:
-    """
-    Get a Grid1f with the mass density of DM squared [$\rho(r)$]. 
-    The density is computed in units of TeV/m**3.
+    r"""
+    Get a Grid1f with a PDF for sampling position following the 
+    Squared DM density in a spherical halo. The PDF is normalized by 
+    the annihilation luminosity
+
+    $PDF = \frac{\rho(r)^2}{\mathfrak{L}_\text{Anna}}$
 
     All vectors are given in the Observer's coordinate system (OCS). 
-    All spatial quantities are assumed to be in Mpc.
 
     For the Grid1f we assume the same number of cells in each direction.
     As for now, we need to specify what is the type of gas density used 
@@ -439,221 +519,135 @@ def SmoothDMHaloMassSquaredDensityGrid(
     actually care about this, as we are only using this as a source 
     sampling function.
 
-    This gonna take a while :|.
+    Then, we normalize by the annihilation emissivity to directly get a 
+    function normalized to one, and check if accelerate the computation time.
 
-    Then, I will normalize by the maximum density to directly get a 
-    mass distribution function normalized to one, and check if that 
-    can accelerate the computation time. For the case of the NFW profile, 
-    the maximum density should be the saturation density. Need to check 
-    for the others DM halo profiles.
-    
-    :param cluster_center: Center of the cluster in the OCS. [Mpc]
-    :type cluster_center: Vector3d
-    :param origin_lower: Lower origin of the grid. [Mpc]
-    :type origin_lower: Vector3d
-    :param ncells: Number of cells used to get the grid
-    :type ncells: int
-    :param spacing: Separation between cells.[Mpc]
-    :type spacing: float
-    :param dmpars: Parameters to describe the DM mass density profile
-    :type dmpars: list[float] | np.ndarray
-    :param dmprofile: Name of DM profile used
-    :type dmprofile: str
-    :return: Grid of DM mass density [TeV/m**3]
-    :rtype: DensityGrid
+    We ask for an odd number of cells to make sure that the center of 
+    the DM halo is an actual point (vertice) of the grid. This is to do 
+    a correct source sampling.
+
+        :param dmhalo_center: Center of the DM halo
+        :type dmhalo_center: u.Quantity
+        :param obs_radius: Radius of the observer/halo $R_{200}$
+        :type obs_radius: u.Quantity
+        :param ncells: [Odd] Number of cells
+        :type ncells: int
+        :param rs: Scale radius
+        :type rs: u.Quantity
+        :param rhos: Scale density
+        :type rhos: u.Quantity
+        :param rsat: Saturation radius
+        :type rsat: u.Quantity
+        :param rhosat: Saturation Density
+        :type rhosat: u.Quantity
+        :param rtrunc: Truncation radius
+        :type rtrunc: u.Quantity
+        :param total_dmlum: Total Annihilation luminosity
+        :type total_dmlum: u.Quantity
+        :param chunksize: Number of points to compute per chunk
+        :type chunksize: int
+        :param dmprofile: Label of the DM density profile
+        :type dmprofile: str
+        :return: PDF Grid for annihilation DM
+        :rtype: DensityGrid
     """
-    msg = "Unknown mass density profile"
-    assert dmprofile in allowed_profiles,msg
 
-    # rho_max = 5e+3
+    # We use the units of the scale radius as a natural choice
+    # to compare and convert between the different units
 
-    # Checking the number of parameters
-    if dmprofile.lower() == "nfw":
+    # As you can see, I am not checking the dimension of the arrays
 
-        msg = "Wrong number of parameters for the NFW profile"
-        assert len(dmpars) == 4,msg
+    lunit   = rs.unit
+    halo_c  = dmhalo_center.to(lunit)
+    obs_r   = obs_radius.to(lunit)
+    box_or  = halo_c - obs_r
+    box_f   = halo_c + obs_r
+    step    = 2*obs_r/(ncells-1)
+    rsat_   = rsat.to(lunit)
+    rtrunc_ = rtrunc.to(lunit)
+    rhos_   = convert_density(rhos,u.Msun/lunit**3)
+    rhosat_ = convert_density(rhosat,u.Msun/lunit**3)
+    dmlum   = total_dmlum.to(u.Msun**2/lunit**3,equivalencies=u.mass_energy())
 
-        rho_max = dmpars[-1]
+    # xs = np.arange(box_or[0].value,box_f[0].value,step=step.value)
+    # ys = np.arange(box_or[1].value,box_f[1].value,step=step.value)
+    # zs = np.arange(box_or[2].value,box_f[2].value,step=step.value)
+    xs = np.linspace(box_or[0].value,box_f[0].value,num=ncells)
+    ys = np.linspace(box_or[1].value,box_f[1].value,num=ncells)
+    zs = np.linspace(box_or[2].value,box_f[2].value,num=ncells)
 
-    gridpos = GridProperties(origin_lower*Mpc,ncells,spacing*Mpc)
+    # Now, we precompute the values of the density with numpy
+
+    rho_ = np.zeros((xs.size,ys.size,zs.size))
+
+    for i in range(0,ncells,chunksize):
+
+        istop  = np.min([i+chunksize,ncells])
+        xsmall = xs[i:istop]
+
+        for j in range(0,ncells,chunksize):
+
+            jstop  = np.min([j+chunksize,ncells])
+            ysmall = ys[j:jstop]
+
+            for k in range(0,ncells,chunksize):
+
+                kstop  = np.min([k+chunksize,ncells])
+                zsmall = zs[k:kstop]
+
+                Xchunk = xsmall[:,None,None]
+                Ychunk = ysmall[None,:,None]
+                Zchunk = zsmall[None,None,:]
+
+                r = np.sqrt(
+                    (Xchunk - halo_c[0].value)**2 + 
+                    (Ychunk - halo_c[1].value)**2 + 
+                    (Zchunk - halo_c[2].value)**2
+                )*lunit
+
+                dmd = dm_mass_density(
+                    r,
+                    rs,
+                    rhos_,
+                    rsat_,
+                    rhosat_,
+                    rtrunc_,
+                    dmprofile=dmprofile,
+                ).value
+
+                rho_[i:istop,j:jstop,k:kstop] = dmd**2
+
+    rho_ = rho_/dmlum.value
+
+    # Because CRpropa use SI unit system
+    # We convert length quantities to meters
+    # and forget about multiplying by dimension factors
+    # as we handle all the operations with astropy.units
+    box = Vector3d(
+        box_or[0].to(u.m).value,
+        box_or[1].to(u.m).value,
+        box_or[2].to(u.m).value
+    )
+
+    gridpos = GridProperties(box,ncells,step.to(u.m).value)
     gridpos.setClipVolume(True)
 
+    # Then, we only need to assign the values to the CRpropa grid
     dm_density = Grid1f(gridpos)
 
-    for idx in range(ncells):
+    for idx in range(gridpos.Nx):
 
-        for idy in range(ncells):
+        for idy in range(gridpos.Ny):
 
-            for idz in range(ncells):
+            for idz in range(gridpos.Nz):
 
-                dummyvec = Vector3d(idx,idy,idz)
-                dummyvec = dummyvec*spacing + origin_lower
-                dummyvec = dummyvec - dmhalo_center
-                distance = np.sqrt(
-                    dummyvec.x**2+dummyvec.y**2+dummyvec.z**2
-                )
+                dm_density.setValue(idx,idy,idz,rho_[idx,idy,idz])
 
-                # rho = dm_mass_density(
-                #     distance,
-                #     dmpars,
-                #     label=dmprofile
-                # )
-
-                rho = 1.0
-
-                dm_density.setValue(idx,idy,idz,rho**2/rho_max**2)
-
-                if distance > 2.0:
-
-                    dm_density.setValue(idx,idy,idz,0)
+    # dm_density.setInterpolationType(TRICUBIC)
 
     dens = DensityGrid(dm_density,True,False,False)
 
     return dens
-
-def SmoothDMHaloNumberDensityGrid(
-    dmhalo_center  : Vector3d,
-    origin_lower   : Vector3d,
-    ncells         : int,
-    spacing        : float,
-    dmpars         : list[float]|np.ndarray,
-    dmmass         : float,
-    dmprofile      : str="nfw"
-    # save           : bool=False
-) -> DensityGrid:
-    """
-    Get a Grid1f with the number (particle) density of DM. 
-    The density is computed in units of m**3.
-
-    All vectors are given in the Observer's coordinate system (OCS). 
-    All spatial quantities are assumed to be in Mpc.
-
-    For the Grid1f we assume the same number of cells in each direction.
-    As for now, we need to specify what is the type of gas density used 
-    to compute the DensityGrid. This is specified by three booleans during 
-    the declaration of the DensityGRid object. The booleans refer to the 
-    cases where the DensityGrid represents H, HI or HII gas densities. 
-    By default, we indicate that our DensityGrid is for H, but we don't 
-    actually care about this, as we are only using this as a source 
-    sampling function.
-
-    This gonna take a while.
-
-    Then, I will normalize by the maximum density to directly get a 
-    mass distribution function normalized to one, and check if that 
-    can accelerate the computation time. For the case of the NFW profile, 
-    the maximum density should be the saturation density. Need to check 
-    for the others DM halo profiles.
-
-    :param dmhalo_center: Center of the cluster in the OCS. [Mpc]
-    :type dmhalo_center: Vector3d
-    :param origin_lower: Lower origin of the grid. [Mpc]
-    :type origin_lower: Vector3d
-    :param ncells: Number of cells used to get the grid
-    :type ncells: int
-    :param spacing: Separation between cells.[Mpc]
-    :type spacing: float
-    :param dmpars: Parameters to describe the DM mass density profile
-    :type dmpars: list[float] | np.ndarray
-    :param dmmass: Mass of the DM candidate. [TeV]
-    :type dmmass: float
-    :param dmprofile: Name of DM profile used
-    :type dmprofile: str
-    :return: Grid of DM mass density [TeV/m**3]
-    :rtype: DensityGrid
-    """
-
-    msg = "Unknown mass density profile"
-    assert dmprofile in allowed_profiles,msg
-
-    # Checking the number of parameters
-    if dmprofile.lower() == "nfw":
-
-        msg = "Wrong number of parameters for the NFW profile"
-        assert len(dmpars) == 4,msg
-
-        rho_max = dmpars[-1]/dmmass
-
-    gridpos = GridProperties(origin_lower*Mpc,ncells,spacing*Mpc)
-    gridpos.setClipVolume(True)
-
-    dm_density = Grid1f(gridpos)
-
-    for idx in range(ncells):
-
-        for idy in range(ncells):
-
-            for idz in range(ncells):
-
-                dummyvec = Vector3d(idx,idy,idz)
-                dummyvec = dummyvec*spacing + origin_lower
-                dummyvec = dummyvec - dmhalo_center
-                distance = np.sqrt(
-                    dummyvec.x**2+dummyvec.y**2+dummyvec.z**2
-                )
-
-                # ndensity = dm_number_density(
-                #     distance,
-                #     dmpars,
-                #     dm_mass=dmmass,
-                #     label=dmprofile
-                # )
-
-                ndensity = 1.0
-
-                dm_density.setValue(idx,idy,idz,ndensity/rho_max)
-
-                if distance > 2.0:
-
-                    dm_density.setValue(idx,idy,idz,0)
-
-    dens = DensityGrid(dm_density,True,False,False)
-
-    return dens
-
-def DMSourceSmoothDistro(
-    dmdensity   : DensityGrid,
-    max_density : float,
-    maxTries    : int,
-    xmin        : float,
-    xmax        : float,
-    ymin        : float,
-    ymax        : float,
-    zmin        : float,
-    zmax        : float
-) -> SourceMassDistribution:
-
-    """
-    Get SourceFeature to add to the Source definition. 
-    The DM densioty can be either mass or number density.
-    
-    :param dmdensity: [Mass or Number] DM density
-    :type dmdensity: DensityGrid
-    :param max_density: Max. value of the density used for normalization.
-    :type max_density: float
-    :param maxTries: Maximum number of trials to get a source.
-    :type maxTries: int
-    :param xmin: Lower Limit for source sampling in the x direction [Mpc]
-    :type xmin: float
-    :param xmax: Lower Limit for source sampling in the x direction [Mpc]
-    :type xmax: float
-    :param ymin: Lower Limit for source sampling in the x direction [Mpc]
-    :type ymin: float
-    :param ymax: Lower Limit for source sampling in the x direction [Mpc]
-    :type ymax: float
-    :param zmin: Lower Limit for source sampling in the x direction [Mpc]
-    :type zmin: float
-    :param zmax: Lower Limit for source sampling in the x direction [Mpc]
-    :type zmax: float
-    """
-
-    dm_sources = SourceMassDistribution(dmdensity,max_density)
-    dm_sources.setXrange(xmin*Mpc,xmax*Mpc)
-    dm_sources.setYrange(ymin*Mpc,ymax*Mpc)
-    dm_sources.setZrange(zmin*Mpc,zmax*Mpc)
-    dm_sources.setMaximalTries(maxTries)
-
-    return dm_sources
 
 def preparePointLikeDMSource(
     dmsource_pos : Vector3d,
@@ -701,12 +695,8 @@ def prepareSmoothExtendedDMSource(
     dmdensity   : DensityGrid,
     max_density : float,
     maxTries    : int,
-    xmin        : float,
-    xmax        : float,
-    ymin        : float,
-    ymax        : float,
-    zmin        : float,
-    zmax        : float,
+    rmin        : float,
+    rmax        : float,
     redshift    : float,
     part_type   : int,
     emin        : float,
@@ -717,42 +707,39 @@ def prepareSmoothExtendedDMSource(
     """
     Docstring for prepareSmoothExtendedDMSource
     
-    :param dmdensity: [Mass or Number] DM density
-    :type dmdensity: DensityGrid
-    :param max_density: Max. value of the density used for normalization.
-    :type max_density: float
-    :param maxTries: Maximum number of trials to get a source.
-    :type maxTries: int
-    :param xmin: Lower Limit for source sampling in the x direction [Mpc]
-    :type xmin: float
-    :param xmax: Lower Limit for source sampling in the x direction [Mpc]
-    :type xmax: float
-    :param ymin: Lower Limit for source sampling in the x direction [Mpc]
-    :type ymin: float
-    :param ymax: Lower Limit for source sampling in the x direction [Mpc]
-    :type ymax: float
-    :param zmin: Lower Limit for source sampling in the x direction [Mpc]
-    :type zmin: float
-    :param zmax: Lower Limit for source sampling in the x direction [Mpc]
-    :type zmax: float
-    :param redshift: Redshift to the center of the DM halo
-    :type redshift: float
-    :param part_type: Particle type to be injected
-    :type part_type: int
-    :param emin: Minimum energy of particles to be injected
-    :type emin: float
-    :param emax: Maximum energy of particles to be injected
-    :type emax: float
-    :param pl_index: Spectral index of PowerLaw
-    :type pl_index: float
+        :param dmdensity: [Mass] DM density
+        :type dmdensity: DensityGrid
+        :param max_density: Max. value of the density used for normalization.
+        :type max_density: float
+        :param maxTries: Maximum number of trials to get a source.
+        :type maxTries: int
+        :param rmin: Lower Limit for source sampling [3D vector,m]
+        :type rmin: float
+        :param rmax: Upper Limit for source sampling [3D vector,m]
+        :type rmax: float
+        :param redshift: Redshift to the center of the DM halo
+        :type redshift: float
+        :param part_type: Particle type to be injected
+        :type part_type: int
+        :param emin: Minimum energy of particles to be injected
+        :type emin: float
+        :param emax: Maximum energy of particles to be injected
+        :type emax: float
+        :param pl_index: Spectral index of PowerLaw
+        :type pl_index: float
+        :return: Source Mass Distribution
+        :rtype: SourceMassDistribution
     """
+
+    xmin,ymin,zmin = rmin
+    xmax,ymax,zmax = rmax
 
     dms = Source()
 
     dm_sources = SourceMassDistribution(dmdensity,max_density)
-    dm_sources.setXrange(xmin*Mpc,xmax*Mpc)
-    dm_sources.setYrange(ymin*Mpc,ymax*Mpc)
-    dm_sources.setZrange(zmin*Mpc,zmax*Mpc)
+    dm_sources.setXrange(xmin,xmax)
+    dm_sources.setYrange(ymin,ymax)
+    dm_sources.setZrange(zmin,zmax)
     dm_sources.setMaximalTries(maxTries)
 
     dms.add(dm_sources)
@@ -762,4 +749,3 @@ def prepareSmoothExtendedDMSource(
     dms.add(SourcePowerLawSpectrum(emin,emax,pl_index))
 
     return dms
-
