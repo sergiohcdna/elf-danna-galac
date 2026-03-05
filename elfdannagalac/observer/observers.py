@@ -13,7 +13,6 @@
 from crpropa import Observer,ObserverSurface
 from crpropa import ObserverTimeEvolution
 from crpropa import Sphere,Vector3d
-from crpropa import Mpc
 from crpropa import TextOutput
 
 from crpropa import (
@@ -44,26 +43,26 @@ def preparePhotonObserver(
     On detection, photons are deactivated, and parameters for every 
     particle are saved into a txt file.
     
-    :param obsCenter: Center of the Sphere [Mpc]
-    :type obsCenter: Vector3d
-    :param obsRadius: Radius of the Sphere [Mpc]
-    :type obsRadius: float
-    :param step: Used for temporal evolution [Mpc]
-    :type step: float
-    :param nsteps: Number of steps used for temporal evolution
-    :type nsteps: int
-    :param outtxt: Instance of txt output to record particles
-    :type outtxt: TextOutput
-    :param deactivate: Deactivate particles on Detection. Default is True
-    :type deactivate: bool
-    :param electronveto: Apply Veto to not record electrons. Default is True
-    :type electronveto: bool
-    :param protonveto: Apply Veto to not record protons. Default is True
-    :type protonveto: bool
-    :param neutrinoveto: Apply Veto to not record neutrinos. Default is True
-    :type neutrinoveto: bool
-    :return: Observer on a Sphere
-    :rtype: Observer
+        :param obsCenter: Center of the Sphere
+        :type obsCenter: Vector3d
+        :param obsRadius: Radius of the Sphere
+        :type obsRadius: float
+        :param step: Used for temporal evolution
+        :type step: float
+        :param nsteps: Number of steps used for temporal evolution
+        :type nsteps: int
+        :param outtxt: Instance of txt output to record particles
+        :type outtxt: TextOutput
+        :param deactivate: Deactivate particles on Detection. Default is True
+        :type deactivate: bool
+        :param electronveto: Apply Veto to not record electrons. Default is True
+        :type electronveto: bool
+        :param protonveto: Apply Veto to not record protons. Default is True
+        :type protonveto: bool
+        :param neutrinoveto: Apply Veto to not record neutrinos. Default is True
+        :type neutrinoveto: bool
+        :return: Observer on a Sphere
+        :rtype: Observer
     """
 
     thisobserver = Observer()
@@ -71,8 +70,8 @@ def preparePhotonObserver(
     thisobserver.add(
         ObserverSurface(
             Sphere(
-                obsCenter*Mpc,
-                obsRadius*Mpc
+                obsCenter,
+                obsRadius
             )
         )
     )
