@@ -179,7 +179,7 @@ class DMHalo():
         self._nsub = self.get_nnorm()
         self._msub = self.get_msub(self._r200,self._msub_min,self._msub_max)
 
-        self._dlum  = cosmo.luminosity_distance(self._z).to(u.Mpc)
+        self._dlum  = cosmo.luminosity_distance(self._z).to(lunit)
         self._coord = SkyCoord(ra=ra,dec=dec,frame="icrs",distance=self._dlum)
         self._cart  = self._coord.cartesian
 
@@ -274,6 +274,11 @@ class DMHalo():
     def h(self):
 
         return self._h
+
+    @property
+    def z(self):
+
+        return self._z
 
     @property
     def msubs(self):
@@ -605,35 +610,3 @@ class DMHalo():
             )*pnorm*nsubs
 
         return m1
-
-    def djdr(self,r:u.Quantity):
-
-        lunit = self._rs.unit
-
-        rho = NFW_profile(
-            r,
-            self._rs,
-            self._rhos,
-            self._rsat,
-            self._rhosat,
-            self._r200,
-            length_unit=lunit
-        )
-
-        return 4*np.pi*rho**2
-    
-    def dddr(self,r:u.Quantity):
-
-        lunit = self._rs.unit
-
-        rho = NFW_profile(
-            r,
-            self._rs,
-            self._rhos,
-            self._rsat,
-            self._rhosat,
-            self._r200,
-            length_unit=lunit
-        )
-
-        return 4*np.pi*rho
