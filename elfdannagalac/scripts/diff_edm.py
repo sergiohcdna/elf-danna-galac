@@ -17,6 +17,9 @@
 #             November-2025                                                   #
 ###############################################################################
 
+import astropy.units as u
+import numpy as np
+
 from crpropa import pc,kpc,Mpc,GeV
 from crpropa import Vector3d
 from crpropa import DiffusionSDE
@@ -31,10 +34,12 @@ from ..dmsrc.dmsource import (
     SmoothDMHaloMassDensityGrid,
     SmoothDMHaloMassSquaredDensityGrid,
     preparePointLikeDMSource,
-    prepareSmoothExtendedDMSource
+    prepareSmoothExtendedDMSource,
+    dm_mass_density,
 )
 
 from ..dmsrc.dmsource import allowed_spatial_types,allowed_profiles
+from ..dmsrc.halo import DMHalo
 from ..dmspectrum.dmspectra import ALLOWED_PROCESSES
 
 from ..tools.utils import create_table,prepareOutput
@@ -57,6 +62,13 @@ def main():
 
     src = options.add_argument_group('Galaxy Cluster','Input params')
 
+    src.add_argument(
+        "--srcname",
+        help="Name of the cluster",
+        type=str,
+        required=True,
+        metavar="Virgo"
+    )
     src.add_argument(
         "--srcz",
         help="Redshift of the cluster",
@@ -81,11 +93,32 @@ def main():
         metavar="extended_smooth"
     )
     src.add_argument(
-        "--dmprofile_pars",
-        help="Parameters to describe the DM density profile",
+        "--m200",
+        help="Mass enclosed up to a radius where $\rho_{crit}=200$ [Msun]",
         type=float,
-        nargs="+",
-        required=False,
+        required=True,
+        metavar="3.54e14 Msun"
+    )
+    src.add_argument(
+        "--r200",
+        help="Radius where $\rho_{crit}=200$ [kpc]",
+        type=float,
+        required=True,
+        metavar="1.406e3 kpc"
+    )
+    src.add_argument(
+        "--ra",
+        help="Right Ascension [in deg]",
+        type=float,
+        required=True,
+        metavar="12 deg"
+    )
+    src.add_argument(
+        "--dec",
+        help="Declination [deg]",
+        type=float,
+        required=True,
+        metavar="27 deg"
     )
     src.add_argument(
         "--process",
@@ -126,33 +159,17 @@ def main():
     )
     src.add_argument(
         "--lmin",
-        help="Minimum scale of the turbulence field [Mpc]",
+        help="Minimum scale of the turbulence field [kpc]",
         type=float,
         required=True,
         metavar="0.02 Mpc"
     )
     src.add_argument(
         "--lmax",
-        help="Maximum scale of the turbulence field [Mpc]",
+        help="Maximum scale of the turbulence field [kpc]",
         type=float,
         required=True,
         metavar="0.15 Mpc"
-    )
-    src.add_argument(
-        "--cluster_center",
-        help="Cartesian Position of the center of the cluster [Mpc]",
-        nargs=3,
-        required=True,
-        type=float,
-        metavar="(16,0,0) Mpc"
-    )
-    src.add_argument(
-        "--origin_box",
-        help="Cartesian origin of the spatial grid [Mpc]",
-        nargs=3,
-        required=True,
-        type=float,
-        metavar="(14,-2,-2) Mpc"
     )
     src.add_argument(
         "--eta_index",
@@ -163,7 +180,7 @@ def main():
     )
     src.add_argument(
         "--core_radius",
-        help="Value of the electron density core radius [Mpc]",
+        help="Value of the electron density core radius [kpc]",
         type=float,
         required=True,
         metavar="0.25 Mpc"
@@ -194,65 +211,10 @@ def main():
     )
     src.add_argument(
         "--ncells",
-        help="Number of points in the spatial grid",
+        help="Odd Number of points in the spatial grid",
         type=int,
         required=True,
-        metavar="512"
-    )
-    src.add_argument(
-        "--spacing",
-        help="Step used to construct the spatial grid [Mpc]",
-        type=float,
-        required=True,
-        metavar="0.008 Mpc"
-    )
-    src.add_argument(
-        "--xmin",
-        help="Min X value for Source's position sampling [Mpc]",
-        type=float,
-        required=False,
-        default=14.0,
-        metavar="14.0 Mpc"
-    )
-    src.add_argument(
-        "--xmax",
-        help="Max X value for Source's position sampling [Mpc]",
-        type=float,
-        required=False,
-        default=18.0,
-        metavar="18.0 Mpc"
-    )
-    src.add_argument(
-        "--ymin",
-        help="Min Y value for Source's position sampling [Mpc]",
-        type=float,
-        required=False,
-        default=-2.0,
-        metavar="-2.0 Mpc"
-    )
-    src.add_argument(
-        "--ymax",
-        help="Max Y value for Source's position sampling [Mpc]",
-        type=float,
-        required=False,
-        default=2.0,
-        metavar="2.0 Mpc"
-    )
-    src.add_argument(
-        "--zmin",
-        help="Min Z value for Source's position sampling [Mpc]",
-        type=float,
-        required=False,
-        default=-2.0,
-        metavar="-2.0 Mpc"
-    )
-    src.add_argument(
-        "--zmax",
-        help="Max Z value for Source's position sampling [Mpc]",
-        type=float,
-        required=False,
-        default=2.0,
-        metavar="2.0 Mpc"
+        metavar="511"
     )
     src.add_argument(
         "--maxtries",
@@ -260,6 +222,14 @@ def main():
         type=float,
         required=False,
         metavar=100000
+    )
+    src.add_argument(
+        "--chunksize",
+        help="Size of chunks to compute grids",
+        type=int,
+        required=False,
+        default=32,
+        metavar="32"
     )
     src.add_argument(
         '--ofname',
@@ -294,10 +264,29 @@ def main():
 
     logger.info(f"Preparing simulation for DM {args.process} in a cluster")
 
-    cx,cy,cz = args.cluster_center
-    ox,oy,oz = args.origin_box
-    c_center = Vector3d(cx,cy,cz)
-    origin_v = Vector3d(ox,oy,oz)
+    cluster = DMHalo(
+        args.srcname,
+        args.ra*u.deg,
+        args.dec*u.deg,
+        args.srcz,
+        args.m200*u.Msun,
+        args.r200*u.kpc,
+        dmsigmav=3.6e-24*u.cm**3/u.s,
+        fsub=0.11,
+        msub_min=1e-5*args.m200*u.Msun,
+        msub_max=1e-2*args.m200*u.Msun,
+        index_pm=-1.9,
+        mpoints=5
+    )
+
+    cluster.info
+
+    cluster_center = cluster.cartcoord.xyz
+    obsRadius      = cluster.r200
+    spacing        = 2*obsRadius/(args.ncells - 1)
+
+    cx,cy,cz  = cluster_center.to(u.m).value
+    c_center  = Vector3d(cx,cy,cz)
 
     e_emin   = args.emin*GeV
     e_emax   = args.emax*GeV
@@ -307,24 +296,19 @@ def main():
     # magnetic field modules
 
     # Magnetic field
-    # The value of the magnetic field is only for testting purposes
-    # We assumed a uniform magnetic field along the z direction
-    # ConstMagVec = Vector3d(0*muG,0*muG,50*muG)
-    # Bfield      = UniformMagneticField(ConstMagVec)
 
-    logger.info("Calculation of Magnetic Field grid for cluster: ")
+    logger.info("Processing Magnetic Field grid for cluster")
     # Now, we can just create our magnetic field c:
     # with turbulence and modulation c:
     Bfield = get_cluster_field(
-        args.brms,
-        args.lmin,
-        args.lmax,
-        c_center,
+        cluster_center,
+        obsRadius,
+        args.core_radius*u.kpc,
+        args.brms*u.uG,
+        args.lmin*u.kpc,
+        args.lmax*u.kpc,
         args.eta_index,
-        args.core_radius,
-        origin_v,
         args.ncells,
-        args.spacing
     )
 
     # parameters used for field line tracking
@@ -367,8 +351,8 @@ def main():
     # radius of the spherical observer
     # By default, the boundary center, the cluster center 
     # and the observer center are the same
-    boundaryCenter  = c_center*Mpc
-    boundaryRadius  = 2.1*Mpc
+    boundaryCenter  = c_center
+    boundaryRadius  = 1.1*obsRadius.to(u.m).value
     clusterBoundary = SphericalBoundary(boundaryCenter,boundaryRadius)
 
     # This is to specify that the simulation ends after some time
@@ -408,11 +392,11 @@ def main():
         logger.info("You choose a point-like source for this simulation")
         # Now, we define parameters associated with the source of DM
         # as position, and redshift
-        srcpos = c_center*Mpc
+        srcpos = c_center
 
         s = preparePointLikeDMSource(
             srcpos,
-            args.srcz,
+            cluster.z,
             part_type,
             e_emin,
             e_emax,
@@ -423,52 +407,83 @@ def main():
 
         logger.info("You choose an extended source for this simulation")
         logger.info("Considering the smooth contribution of the DM halo ")
+        rho_trunc = dm_mass_density(
+            spacing,
+            cluster.rs,
+            cluster.rhos,
+            cluster.r_sat,
+            cluster.rho_sat,
+            cluster.r200,
+            cluster.DMrhoLabel
+        )
+        msg = (
+            "To avoid numerical precision issues we do not use the "
+            "saturation density during grid calculation. That implies "
+            "larger computation times trying to sample regions where "
+            "the probability is too low (1e-9). We will use the density "
+            f"evaluated at the size of the cells: {rho_trunc:0.5e}"
+        )
+        logger.warning(msg)
         # First we need to prepare the DMDensity Grid 
         # then, we can define the source to inject the particles.
         # By default, we are assuming that each sampled source inject 
         # particles isotropically.
 
+        rmin = cluster_center - obsRadius
+        rmax = cluster_center + obsRadius
+
         if args.process.lower() == "decay":
 
             dmgrid = SmoothDMHaloMassDensityGrid(
-                c_center,
-                origin_v,
-                int(args.ncells/4),
-                args.spacing*4,
-                args.dmprofile_pars,
-                args.dmprofile
+                cluster_center,
+                obsRadius,
+                args.ncells,
+                cluster.rs,
+                cluster.rhos,
+                spacing,
+                rho_trunc,
+                cluster.r200,
+                cluster.m200,
+                args.chunksize,
+                dmprofile=cluster.DMrhoLabel
             )
+
+            maxdens = rho_trunc**2/cluster.l_dm_anna
 
         if args.process.lower() == "anna":
 
             dmgrid = SmoothDMHaloMassSquaredDensityGrid(
-                c_center,
-                origin_v,
-                int(args.ncells/4),
-                args.spacing*4,
-                args.dmprofile_pars,
-                args.dmprofile
+                cluster_center,
+                obsRadius,
+                args.ncells,
+                cluster.rs,
+                cluster.rhos,
+                spacing,
+                rho_trunc,
+                cluster.r200,
+                cluster.l_dm_anna,
+                args.chunksize,
+                dmprofile=cluster.DMrhoLabel
             )
+
+            maxdens = rho_trunc/cluster.l_dm_decay
 
         s = prepareSmoothExtendedDMSource(
             dmgrid,
-            1.0,
+            maxdens.value,
             int(args.maxtries),
-            args.xmin,
-            args.xmax,
-            args.ymin,
-            args.ymax,
-            args.zmin,
-            args.zmax,
-            args.srcz,
+            rmin.to(u.m).value,
+            rmax.to(u.m).value,
+            cluster.z,
             part_type,
             e_emin,
             e_emax,
             pl_index,
         )
 
+    logger.info(f"Maximum of the PDF: {maxdens:0.5e}")
     logger.info(s.getDescription())
-    logger.info(s.getCandidate().source)
+    # logger.info(s.getCandidate().source)
 
     # Here we prepare the CRpropa file output 
     # with some default parameters.
@@ -502,10 +517,13 @@ def main():
     # By default, we define that the center for the observer,
     # the DM halo, and the galaxy cluster, are the same
     # obsCenter = c_center*Mpc
-    obsRadius = 2.0
 
     # And this is to create an instance of the observer class
-    obs = preparePhotonObserver(c_center,obsRadius,step,n,Out)
+    obs = preparePhotonObserver(
+        c_center,obsRadius.to(u.m).value,step,n,Out
+    )
+
+    logger.info(f"Observer centered at {c_center} ({cluster_center})")
 
     # Finally, the inverse compton module
     # And here, we are only considering the CMB as seed photon field
