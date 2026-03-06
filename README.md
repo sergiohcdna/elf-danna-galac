@@ -105,10 +105,11 @@ diffedm --help
 For your convenience, the output is:
 
 ```bash
-usage: diffedm [-h] --srcz 0.0043 --dmprofile nfw --dmsource_type extended_smooth [--dmprofile_pars DMPROFILE_PARS [DMPROFILE_PARS ...]] [--process [anna,decay]] --emin 100
-               --emax 1e5 --nparticles 10000 --brms 5 muG --lmin 0.02 Mpc --lmax 0.15 Mpc --cluster_center (16,0,0) Mpc (16,0,0) Mpc (16,0,0) Mpc --origin_box (14,-2,-2) Mpc
-               (14,-2,-2) Mpc (14,-2,-2) Mpc --eta_index 0.33 --core_radius 0.25 Mpc [--diff_epsilon 0.1] [--diff_scale 0.1] [--diff_alpha 0.1] --ncells 512 --spacing 0.008
-               Mpc [--xmin 14.0 Mpc] [--xmax 18.0 Mpc] [--ymin -2.0 Mpc] [--ymax 2.0 Mpc] [--zmin -2.0 Mpc] [--zmax 2.0 Mpc] [--maxtries 100000] [--ofname OFNAME] [--odir ./]
+$ diffedm --help
+2026-03-05 21:59:54.800 | INFO     | elfdannagalac.scripts.diff_edm:main:256 - Getting parameters
+usage: diffedm [-h] --srcname Virgo --srcz 0.0043 --dmprofile nfw --dmsource_type extended_smooth --m200 3.54e14 Msun --r200 1.406e3 kpc --ra 12 deg --dec 27 deg
+               [--process [anna,decay]] --emin 100 --emax 1e5 --nparticles 10000 --brms 5 muG --lmin 0.02 Mpc --lmax 0.15 Mpc --eta_index 0.33 --core_radius 0.25 Mpc
+               [--diff_epsilon 0.1] [--diff_scale 0.1] [--diff_alpha 0.1] --ncells 511 [--maxtries 100000] [--chunksize 32] [--ofname OFNAME] [--odir ./]
 
 Galaxy clusters project: elf-danna-galac November/2025
 
@@ -118,39 +119,32 @@ options:
 Galaxy Cluster:
   Input params
 
+  --srcname Virgo       Name of the cluster
   --srcz 0.0043         Redshift of the cluster
   --dmprofile nfw       Label for DM profile parametrization
   --dmsource_type extended_smooth
                         Point or Extended like DM injection sources
-  --dmprofile_pars DMPROFILE_PARS [DMPROFILE_PARS ...]
-                        Parameters to describe the DM density profile
+  --m200 3.54e14 Msun   Mass enclosed up to a radius where $ ho_{crit}=200$ [Msun]
+  --r200 1.406e3 kpc    Radius where $ ho_{crit}=200$ [kpc]
+  --ra 12 deg           Right Ascension [in deg]
+  --dec 27 deg          Declination [deg]
   --process [anna,decay]
                         Annihilation or Decay?
   --emin 100            Minimum energy of electrons (GeV)
   --emax 1e5            Maximum energy of electrons (GeV)
   --nparticles 10000    Number of particles to be smulated
   --brms 5 muG          RMS value of the turbulence field [muG]
-  --lmin 0.02 Mpc       Minimum scale of the turbulence field [Mpc]
-  --lmax 0.15 Mpc       Maximum scale of the turbulence field [Mpc]
-  --cluster_center (16,0,0) Mpc (16,0,0) Mpc (16,0,0) Mpc
-                        Cartesian Position of the center of the cluster [Mpc]
-  --origin_box (14,-2,-2) Mpc (14,-2,-2) Mpc (14,-2,-2) Mpc
-                        Cartesian origin of the spatial grid [Mpc]
+  --lmin 0.02 Mpc       Minimum scale of the turbulence field [kpc]
+  --lmax 0.15 Mpc       Maximum scale of the turbulence field [kpc]
   --eta_index 0.33      Index of the Bfield dependance with radial distance
   --core_radius 0.25 Mpc
-                        Value of the electron density core radius [Mpc]
+                        Value of the electron density core radius [kpc]
   --diff_epsilon 0.1    Anisotrpy factor of the diffusion coefficient
   --diff_scale 0.1      Scaling factor to set the diffusion coefficient
   --diff_alpha 0.1      Spectral index for the Diff_coeff = E^{-alpha}
-  --ncells 512          Number of points in the spatial grid
-  --spacing 0.008 Mpc   Step used to construct the spatial grid [Mpc]
-  --xmin 14.0 Mpc       Min X value for Source's position sampling [Mpc]
-  --xmax 18.0 Mpc       Max X value for Source's position sampling [Mpc]
-  --ymin -2.0 Mpc       Min Y value for Source's position sampling [Mpc]
-  --ymax 2.0 Mpc        Max Y value for Source's position sampling [Mpc]
-  --zmin -2.0 Mpc       Min Z value for Source's position sampling [Mpc]
-  --zmax 2.0 Mpc        Max Z value for Source's position sampling [Mpc]
+  --ncells 511          Odd Number of points in the spatial grid
   --maxtries 100000     Maximum number of tries for source sampling
+  --chunksize 32        Size of chunks to compute grids
   --ofname OFNAME       Output file name [fits,fits.gz]
   --odir ./             Output directory to save files
 ```
@@ -158,7 +152,7 @@ Galaxy Cluster:
 A simulation using some default parameters should be like this:
 
 ```bash
-diffedm --emin 100 --emax 1e4 --nparticles 100000 --ofname testSmoothHalo.fits.gz --cluster_center 16 0 0 --brms 5.0 --lmin 0.02 --lmax 0.15 --origin_box 14 -2 -2 --eta_index 0.33  --core_radius 0.25 --ncells 512 --spacing 0.008 --srcz 0.0043 --dmprofile nfw  --dmprofile_pars 0.3 157.556 0.008 5.605e3 --xmin 14.0 --xmax 18.0 --ymin -2.0 --ymax 2.0 --zmin -2.0 --zmax 2.0 --maxtries 1e6 --dmsource_type extended_smooth
+diffedm --srcname Abel --srcz 0.0308 --dmprofile nfw --dmsource_type extended_smooth --m200 3.545e14 --r200 1.5e3 --ra 12.0 --dec 27.0 --process decay --emin 100 --emax 1e5 --nparticles 10000 --brms 5.0 --lmin 20 --lmax 150 --eta_index 0.33  --core_radius 250 --ncells 511 --maxtries 1e8 --ofname testdecay.fits.gz
 ```
 
 An example of the expected output is:
@@ -200,8 +194,8 @@ Because, we need to estimate the grids to approximate the DM density and the mag
 From the output of the simulation, we can generate a plot of the number of photons reaching the detection surface (`ObserverSurface`) at the outskirts of the cluster. We only consider those photons going in the dierction of the observer at Earth within a field of view of the angular size of the cluster. All the calculations are packed in the app `countsmap`. An example of the help message for this app is:
 
 ```bash
-countsmap --help
-
+$ countsmap --help
+2026-03-05 22:11:25.203 | INFO     | elfdannagalac.scripts.plotmaps:get_counts_map:112 - Getting parameters
 usage: countsmap [-h] --srcname Virgo Toy --srcz 0.0043 --srcpos (16,0,0) Mpc (16,0,0) Mpc (16,0,0) Mpc --srcdistance 16.0 Mpc --fov 8.0 deg
                  [--pixsize 0.1 deg] --rfile path/to/results.fits.gz [--frame icrs] [--odir ./]
 
@@ -230,7 +224,7 @@ Galaxy Cluster:
 And example of the output is:
 
 ```bash
-countsmap --srcname "Virgo Toy" --srcz 0.0043 --srcpos -15.48616789 -2.09541755 3.43334085 --srcdistance 16.0 --fov 8.0 --pixsize 0.1 --rfile testVirgoSmoothHalo.fits.gz --frame icrs 
+countsmap --srcname Abel --srcz 0.0308 --srcpos 112.841 23.985 58.780 --srcdistance 129.474 --fov 1.6 --pixsize 0.05 --rfile testdecay.fits.gz
 2025-12-25 04:39:04.321 | INFO     | elfdannagalac.scripts.plotmaps:get_counts_map:112 - Getting parameters
 2025-12-25 04:39:04.322 | INFO     | elfdannagalac.tools.misc:checkDir:128 - . already exists
 2025-12-25 04:39:04.322 | INFO     | elfdannagalac.scripts.plotmaps:get_counts_map:118 - Getting source position
@@ -261,6 +255,25 @@ n_e = n_0\left(1+\frac{r}{r_\text{c}}\right)^{-\frac{3\beta}{2}}
 ```
 
 To simulate the diffusion of electrons in a galaxy cluster, we model $B(r)$ in a cluster using `CRpropa`. We separate this in two steps. First, the turbulent magnetic field is computed over a grid covering the total spatial extension of the cluster. The rubulent field uses an instance of `SimpleGridTurbulence`, with appropiate $B_\text{RMS}$ and length scales $l_\text{min}$ and $l_\text{max}$. In a second step, the resulting turbulent field is scaled using a `Grid1f` object where the values are the ones obtained from $B(r)$ modulation function given previously.
+
+### Dark matter halo
+
+A DM halo is described given its total mass and radial size. By default we use the value of the radius where the density of the DM halo is $200\rho_\text{crit}$, where $\rho_\text{crit}$ is the critical density of the uUniverse at redshift $z$; and then the input parameters to describe a halo are $M_{200}$ and $R_{200}$. For completeness, we verify that the value of $R_{200}$ is consistent with the provided total mass $M_{200}$. Then, other parameters are computed according to the specific density profile. Until now, we only consider the NFW profile. In this particular case, the NFW profile, we include a saturation radius where the density reach a constant value. The calculations include the estimation of the scale radius $r_s$ and scale density $\rho_s$, the total luminosities for annihilation and decay of DM inside the DM halo without considering the effect of substructure; and the total number of subhalos in the range of masses $[m_\text{min},m_\text{max}]$ given a fraction $f_\text{sub}$ of the total mass $M_{200}$. 
+
+The total luminosity for annihilation of DM inside the halo is:
+
+```math
+\mathfrak{L}_\text{anna} = 4\pi\frac{\langle\sigma v\rangle}{m_\text{DM}}\int_0^{R_{200}} {\rm d}r~r^2\rho^{2}(r)
+```
+
+while for decay, the luminosity is:
+
+```math
+\mathfrak{L}_\text{decay} = 4\pi\Gamma\int_0^{R_{200}} {\rm d}r~r^2\rho(r)
+```
+
+For example for a DM candidate with a mass of 100 GeV, and thermal annihilation cross-section $`\langle\sigma~v\rangle = 3.6\times10^{-24}~\text{cm}^3~\text{s}^{-1}`$ and decay lifetime $`\Gamma^{-1} = 10^{27}\text{s}`$, the luminosities are in the order of $`10^{42}\text{erg}~\text{s}^{-1}`$ and $`10^{41}\text{erg}~\text{s}^{-1}`$, respectively.
+
 
 ### Dark Matter profiles and injection points 
 
