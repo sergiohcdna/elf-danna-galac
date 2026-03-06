@@ -158,36 +158,65 @@ diffedm --srcname Abel --srcz 0.0308 --dmprofile nfw --dmsource_type extended_sm
 An example of the expected output is:
 
 ```bash
-2025-12-23 00:31:22.851 | INFO     | elfdannagalac.scripts.diff_edm:main:275 - Getting parameters
-2025-12-23 00:31:22.852 | INFO     | elfdannagalac.tools.misc:checkDir:128 - . already exists
-2025-12-23 00:31:22.852 | INFO     | elfdannagalac.scripts.diff_edm:main:302 - Calculation of Magnetic Field grid for cluster: 
-2025-12-23 00:32:24.304 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:100 - Description of the field:
-2025-12-23 00:32:24.305 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:101 - Correlation Length is: 39.182 kpc
-2025-12-23 00:32:24.305 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:102 - RMS B field is: 5.0 microG
-2025-12-23 00:32:24.305 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:103 - Mean B field is: 4.606491319465118 microG
-2025-12-23 00:32:24.305 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:104 - B field at the center of the cluster: 5.218 microG
-2025-12-23 00:48:58.419 | INFO     | elfdannagalac.scripts.diff_edm:main:346 - Preparing Diffusion module
-2025-12-23 00:48:58.420 | INFO     | elfdannagalac.scripts.diff_edm:main:392 - Preparing dark matter source
-2025-12-23 00:48:58.420 | INFO     | elfdannagalac.scripts.diff_edm:main:411 - You choose an extended source for this simulation
-2025-12-23 00:48:58.420 | INFO     | elfdannagalac.scripts.diff_edm:main:412 - Considering the smooth contribution of the DM halo
-2025-12-23 00:49:15.738 | INFO     | elfdannagalac.scripts.diff_edm:main:443 - Cosmic ray source
-        SourceRedshift: Redshift z = 0.0043
+2026-03-05 22:06:20.312 | INFO     | elfdannagalac.scripts.diff_edm:main:256 - Getting parameters
+2026-03-05 22:06:20.313 | INFO     | elfdannagalac.tools.misc:checkDir:128 - . already exists
+2026-03-05 22:06:20.313 | INFO     | elfdannagalac.scripts.diff_edm:main:265 - Preparing simulation for DM decay in a cluster
+2026-03-05 22:06:20.315 | WARNING  | elfdannagalac.dmsrc.halo:__init__:135 - Input R200 1500.000 kpc will be inconsistent with the rest of calculations.
+ Setting R200 to the value obtained using the critical density: 1406.363 kpc
+2026-03-05 22:12:34.292 | INFO     | elfdannagalac.dmsrc.halo:info:352 - 
+Abel cluster configured with: 
+        - Redshift: 0.031
+        - D_lum: 129474.231 kpc
+        - Coord: (12.000 deg,27.000 deg) [ICRS]
+        - X: 112.841 Mpc
+        - Y: 23.985 Mpc
+        - Z: 58.780 Mpc
+        - Cluster Radius [R200]: 1406.363 kpc
+        - Total Mass [M200]: 3.545e+14 solMass
+        - Scale radius: 86.108 kpc
+        - Scale density: 2.313e+07 solMass / kpc3
+        - Saturation Radius: 2.390e-07 kpc
+        - Saturation Density: 8.333e+15 solMass / kpc3
+        - Number of subhalos: 1225  (from [3.545e+09 solMass,3.545e+12 solMass])
+        - Total mass in form of subhalos: 3.898e+13 solMass (11.0% of the cluster mass)
+        - Annihilation emissivity [No sub]: 1.431e+21 solMass2 / kpc3 (6.058e+70 GeV2 / cm3)
+        - Decay emissivity [No sub]: 3.545e+14 solMass (3.954e+71 GeV)
+        - DM luminosity [Annihilation, No sub]: 3.49407e+42 erg / s
+        - DM luminosity [Decay, No sub]: 6.33525e+41 erg / s
+
+2026-03-05 22:12:34.292 | WARNING  | elfdannagalac.dmsrc.halo:info:363 - For the annihilation luminosity a candiate with a mass 100.00 GeV and thermal-average annihilation cross section 3.60e-24 cm3 / s were used. 
+For decay, the luminosity was estimated assuming a lifetime of 1.00e27 s.
+2026-03-05 22:12:34.292 | INFO     | elfdannagalac.scripts.diff_edm:main:300 - Processing Magnetic Field grid for cluster
+2026-03-05 22:13:47.298 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:169 - Description of the field:
+2026-03-05 22:13:47.298 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:170 - Correlation Length is: 39.18226 kpc
+2026-03-05 22:13:47.298 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:171 - RMS B field is: 5.00000 microG
+2026-03-05 22:13:47.298 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:172 - Mean B field is: 4.60698 microG
+2026-03-05 22:13:47.298 | INFO     | elfdannagalac.magneticfield.bfields:get_cluster_field:173 - B field at the center of the cluster: 5.97097 microG
+2026-03-05 22:14:56.666 | INFO     | elfdannagalac.scripts.diff_edm:main:343 - Preparing Diffusion module
+2026-03-05 22:14:56.666 | INFO     | elfdannagalac.scripts.diff_edm:main:389 - Preparing dark matter source
+2026-03-05 22:14:56.666 | INFO     | elfdannagalac.scripts.diff_edm:main:408 - You choose an extended source for this simulation
+2026-03-05 22:14:56.666 | INFO     | elfdannagalac.scripts.diff_edm:main:409 - Considering the smooth contribution of the DM halo 
+2026-03-05 22:14:56.667 | WARNING  | elfdannagalac.scripts.diff_edm:main:426 - To avoid numerical precision issues we do not use the saturation density during grid calculation. That implies larger computation times trying to sample regions where the probability is too low (1e-9). We will use the density evaluated at the size of the cells: 3.18965e+08 solMass / kpc3
+2026-03-05 22:16:10.293 | INFO     | elfdannagalac.scripts.diff_edm:main:484 - Maximum of the PDF: 7.11199e-05 1 / kpc3
+2026-03-05 22:16:10.294 | INFO     | elfdannagalac.scripts.diff_edm:main:485 - Cosmic ray source
+        SourceRedshift: Redshift z = 0.0308
     SourceIsotropicEmission: Random isotropic direction
     SourceParticleType: 11
-    SourcePowerLawSpectrum: Random energy E = 1e-07 - 1e-05 EeV, dN/dE ~ E^-2
+    SourcePowerLawSpectrum: Random energy E = 1e-07 - 0.0001 EeV, dN/dE ~ E^-2
 
-2025-12-23 00:49:15.738 | INFO     | elfdannagalac.scripts.diff_edm:main:444 - Particle 11, E = 5.27485e-07 EeV, x = 16.1587 0.0683999 -0.0395202 Mpc, p = -0.686251 0.160108 0.709524
-2025-12-23 00:49:15.739 | INFO     | elfdannagalac.scripts.diff_edm:main:449 - Preparing CRpropa txtOutput to save data
-2025-12-23 00:49:15.739 | INFO     | elfdannagalac.scripts.diff_edm:main:463 - Preparing Photon Observer
-2025-12-23 00:49:15.778 | INFO     | elfdannagalac.scripts.diff_edm:main:496 - Adding Different modules to the simulation
+2026-03-05 22:16:10.294 | INFO     | elfdannagalac.scripts.diff_edm:main:491 - Preparing CRpropa txtOutput to save data
+2026-03-05 22:16:10.295 | INFO     | elfdannagalac.scripts.diff_edm:main:505 - Preparing Photon Observer
+2026-03-05 22:16:10.295 | INFO     | elfdannagalac.scripts.diff_edm:main:526 - Observer centered at Vector(3.48192E+24, 7.40106E+23, 1.81376E+24) ([112841.43960637  23985.18841662  58780.07081334] kpc)
+2026-03-05 22:16:10.335 | INFO     | elfdannagalac.scripts.diff_edm:main:541 - Adding Different modules to the simulation
 crpropa::ModuleList: Number of Threads: 16
 Run ModuleList
-  Started Tue Dec 23 00:49:15 2025 : [ Finished ] 100%    Needed: 00:26:44  - Finished at Tue Dec 23 01:15:59 2025
-2025-12-23 01:15:59.165 | INFO     | elfdannagalac.scripts.diff_edm:main:512 - Saving data to fits table
-2025-12-23 01:24:31.929 | INFO     | elfdannagalac.tools.misc:elapsed_time:116 - Total Elapsed time: 00:53:09
+  Started Thu Mar  5 22:16:10 2026 : [ Finished ] 100%    Needed: 00:11:51  - Finished at Thu Mar  5 22:28:01 2026
+2026-03-05 22:28:01.807 | INFO     | elfdannagalac.scripts.diff_edm:main:557 - Saving data to fits table
+2026-03-05 22:28:56.147 | INFO     | elfdannagalac.tools.misc:elapsed_time:116 - Total Elapsed time: 00:22:35
 ```
 
-Because, we need to estimate the grids to approximate the DM density and the magnetic field of the galaxy cluster, the total simulation for 1e5 particles takes approximately 55 min using 16 threads in a remote server with Alma 8.
+~Because, we need to estimate the grids to approximate the DM density and the magnetic field of the galaxy cluster, the total simulation for 1e5 particles takes approximately 55 min using 16 threads in a remote server with Alma 8.~
+The computation time has been reduced after we optimized the calculation of grids for the magnetic field and PDF for source sampling. Now, for a cubic grid of size $511^3$ cells, the software takes approx. 1 minute to compute all the values and load the `CRpropa` Grid instances. But, still, the computation times presented in example outputs were obtained from running the simulation on a server with Alma 8,, and accessing 16 threads. However, the computation of the grids is optimized even if no access to multithreading is available.
 
 ## Getting a projected map of photons detected
 
@@ -258,7 +287,7 @@ To simulate the diffusion of electrons in a galaxy cluster, we model $B(r)$ in a
 
 ### Dark matter halo
 
-A DM halo is described given its total mass and radial size. By default we use the value of the radius where the density of the DM halo is $200\rho_\text{crit}$, where $\rho_\text{crit}$ is the critical density of the uUniverse at redshift $z$; and then the input parameters to describe a halo are $M_{200}$ and $R_{200}$. For completeness, we verify that the value of $R_{200}$ is consistent with the provided total mass $M_{200}$. Then, other parameters are computed according to the specific density profile. Until now, we only consider the NFW profile. In this particular case, the NFW profile, we include a saturation radius where the density reach a constant value. The calculations include the estimation of the scale radius $r_s$ and scale density $\rho_s$, the total luminosities for annihilation and decay of DM inside the DM halo without considering the effect of substructure; and the total number of subhalos in the range of masses $[m_\text{min},m_\text{max}]$ given a fraction $f_\text{sub}$ of the total mass $M_{200}$. 
+A DM halo is described given its total mass and radial size. By default we use the value of the radius where the density of the DM halo is $200\rho_\text{crit}$, where $\rho_\text{crit}$ is the critical density of the uUniverse at redshift $z$. The input parameters to describe a halo are $M_{200}$ and $R_{200}$. For completeness, we verify that the value of $R_{200}$ is consistent with the provided total mass $M_{200}$. Other parameters are computed according to an specific density profile. Until now, we only consider the NFW profile. In this particular case, the NFW profile, we include a saturation radius where the density reach a constant value. The configuration of the DMHalo object includes the estimation of the scale radius $r_s$ and scale density $\rho_s$, the total luminosities for annihilation and decay of DM inside the DM halo without considering the effect of substructure; and the total number of subhalos in the range of masses $`[m_\text{min},m_\text{max}]`$ given a fraction $f_\text{sub}$ of the total mass $M_{200}$. 
 
 The total luminosity for annihilation of DM inside the halo is:
 
@@ -274,10 +303,45 @@ while for decay, the luminosity is:
 
 For example for a DM candidate with a mass of 100 GeV, and thermal annihilation cross-section $`\langle\sigma~v\rangle = 3.6\times10^{-24}~\text{cm}^3~\text{s}^{-1}`$ and decay lifetime $`\Gamma^{-1} = 10^{27}\text{s}`$, the luminosities are in the order of $`10^{42}\text{erg}~\text{s}^{-1}`$ and $`10^{41}\text{erg}~\text{s}^{-1}`$, respectively.
 
+> [!IMPORTANT]
+> The previous equations are the formal definitions of the luminosities. However, we provide only the result of the integral and the angular term in our code, as they are more meaningful for other calculations as the spatial PDFs used for source sampling.
+
+
+The probability that a subhalo with mass $m_i$ and concentration $c_i$ is located at a position $r_i$ is given by:
+
+```math
+P_\text{sub}(r_i,m_i,c_i) = \frac{1}{\kappa_w} \frac{{\rm d}n}{{\rm d}V}\frac{{\rm d}n}{{\rm d}m}\frac{{\rm d}n}{{\rm d}c}
+```
+
+where $`\kappa_w`$ is obtained from the condition that $`P_\text{sub}`$ is normalized to 1:
+
+```math
+\int_0^{R_{200}}~\int_{m_\text{min}}^{m_\text{max}}~\int_{c_\text{min}=1}^{c_\text{max}(r_i,m_i)}~{\rm d}V~{\rm d}m~{\rm d}c P_\text{sub}(r_i,m_i,c_i) = 1
+```
+
+For the example given above, for a cluster with a mass of $`M_{200} = 3.4\times10^{14}~M_\odot`$, assuming that subhalos have masses in the range from $`[10^{-5}M_{200},10^{-1}M_{200}]`$, and that the total mass in form of subhalos represents $`\thicksim 11\%`$ of the total mass of the cluster (that is consistent with N-body simulations), gives a total number of subhalos of around 1200 subhalos that is also consistent, in average, with the number of observable galaxies for a galaxy cluster.
+
+We consider the calculation of substructure because they are important when considering the annihilation of dark matter and the boost factor that results on the total gamma-ray emission.
+
+All the previous calculations are included in the class `DMHalo`. An example of the configuration of an Abel-like galaxy cluster is shown in the ouput of the `diffedm` app above.
 
 ### Dark Matter profiles and injection points 
 
 We also need to tell `CRpropa` what will be the location of the sources to inject electrons in the DM halo of the galaxy cluster. From cosmological simulations, we expect two contributions to the DM halo of galaxy clusters, a smooth component from the main halo, and some (a lot of) subhalos embedded in the galaxy cluster. For the smooth component we use the same approach as in this [`CRpropa` tutorial](https://crpropa.github.io/CRPropa3/pages/example_notebooks/density/density_grid_sampling.html). We create a grid with values of the DM mass density profile (for now, we are only considering a Navarro-Frenk-White, NFW, profile) normalized to the maximum value of the density (either the saturation density $\rho_\text{sat}$ or the density at the radius given by the dimension of the grid, $`\rho_\text{DM}(r_\text{step})`$). Then, the particles to be simulated are injected with position sampled from the DM density profile of the main smooth halo. This give us the extended diffuse component.
+
+In particular, besides the spectrum of injected electrons, we expect a difference between the spatial signal obtained from annihilation and decay of DM particles with the former being more cuspy towards the center of the cluster and the last resulting in a more extended emission (yeah, exactly the same as in gamma-ray indirect DM searches). Additionally, we consider providing the spatial Probability Density Function (PDF) instead of the DM mass density profiles. For annihilation, because the expected injection rate of electrons is proportional to $`\rho^2`$, the spatial PDF is given by:
+
+```math
+\text{PDF}_\text{anna} = \frac{\rho^{2}(r)}{\mathfrak{L}_\text{anna}}
+```
+
+and for decay:
+
+```math
+\text{PDF}_\text{decay} = \frac{\rho(r)}{\mathfrak{L}_\text{decay}}
+```
+
+where $`\mathfrak{L}_\text{decay}`$ is just the enclosed mass up to radius $`R_{200}`$.
 
 For the subhalos, **work in progress**
 
