@@ -450,7 +450,7 @@ class DMHalo():
         for i,j in zip(edges[:-1],edges[1:]):
 
             norm += nsub_tot(
-                0*u.Mpc,
+                0*self._r200.unit,
                 self._r200,
                 i*self._m200,
                 j*self._m200,
@@ -472,9 +472,9 @@ class DMHalo():
 
         # This function is used to estimate the 
         # normalization in the number of subhalos 
-        # function. We recquire that the faction 
+        # function. We recquire that the fraction 
         # of mass in the form of subhalos is fsub 
-        # in the range of msub_min and msub_mass.
+        # in the range of msub_min and msub_max.
 
         pnorm = self._kw
 
@@ -489,7 +489,7 @@ class DMHalo():
         for i,j in zip(edges[:-1],edges[1:]):
 
             mtot += msub_tot(
-                0*u.Mpc,
+                0*self._r200.unit,
                 self._r200,
                 i*self._m200,
                 j*self._m200,
@@ -515,7 +515,7 @@ class DMHalo():
     ) -> float:
 
         msub_ = convert_mass(msub)
-        rsub_ = rsub.to(u.Mpc)
+        rsub_ = rsub.to(self._rs.unit)
 
         pnorm = self._kw
 
@@ -539,8 +539,8 @@ class DMHalo():
 
     def dnsubdr(self,rsub : u.Quantity) -> u.Quantity :
 
-        rsub_ = rsub.to(u.Mpc)
-        dndr  = 0/u.Mpc**3
+        rsub_ = rsub.to(self._rs.unit)
+        dndr  = 0/self._rs.unit**3
         pnorm = self._kw
         nsubs = self._nsub
 
@@ -580,7 +580,7 @@ class DMHalo():
 
         pnorm = self._kw
         nsubs = self._nsub
-        rsmax = rsubmax.to(u.Mpc)
+        rsmax = rsubmax.to(self._rs.unit)
         msmin = convert_mass(msubmin)
         msmax = convert_mass(msubmax)
 
@@ -595,7 +595,7 @@ class DMHalo():
         for i,j in zip(edges[:-1],edges[1:]):
 
             m1 += msub_tot(
-                0*u.Mpc,
+                0*self._rs.unit,
                 rsmax,
                 i*self._m200,
                 j*self._m200,
