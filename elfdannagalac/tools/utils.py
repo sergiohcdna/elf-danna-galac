@@ -20,6 +20,8 @@ from crpropa import Mpc,GeV
 
 from pathlib import Path
 
+# #	D	time	z	SN	ID	E	X	Y	Z	Px	Py	Pz	SN0	ID0	E0	X0	Y0	Z0	P0x	P0y	P0z	SN1	ID1	E1	X1	Y1	Z1	P1x	P1y	P1z	W	tag
+
 def create_table(
     ifname    : Path,
     ofname    : Path,
@@ -46,7 +48,7 @@ def create_table(
     names = names.split()[1:]
 
     dtypes = [
-        float,float,
+        float,float,float,
         int,int,float,float,float,float,float,float,float,
         int,int,float,float,float,float,float,float,float,
         int,int,float,float,float,float,float,float,float,
@@ -54,7 +56,7 @@ def create_table(
     ]
 
     units = [
-        u.Mpc,None,
+        u.Mpc,u.Myr,None,
         None,None,u.GeV,u.Mpc,u.Mpc,u.Mpc,None,None,None,
         None,None,u.GeV,u.Mpc,u.Mpc,u.Mpc,None,None,None,
         None,None,u.GeV,u.Mpc,u.Mpc,u.Mpc,None,None,None,
@@ -64,7 +66,8 @@ def create_table(
     ph_evs = np.genfromtxt(
         ifname,
         delimiter="\t",
-        skip_header=26,
+        # skip_header=26,
+        comments="#",
         dtype=dtypes,
         names=names
     )
