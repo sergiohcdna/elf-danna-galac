@@ -14,6 +14,7 @@ import astropy.units as u
 import numpy as np
 
 from scipy.integrate import dblquad,tplquad
+from scipy.special import erf
 
 from ..dmsrc.concentrations import get_c_sub
 from .subhalo_dndc import p_nsub_c
@@ -113,6 +114,154 @@ def p_nsub_tot(
 
     return tot_prob
 
+# def msub_tot(
+#     rmin      : u.Quantity,
+#     rmax      : u.Quantity,
+#     msub_min  : u.Quantity,
+#     msub_max  : u.Quantity,
+#     rs        : u.Quantity,
+#     rhos      : u.Quantity,
+#     rsat      : u.Quantity,
+#     rhosat    : u.Quantity,
+#     r200      : u.Quantity,
+#     m200      : u.Quantity,
+#     sigma_c   : float  = 0.2,
+#     index     : float  = -1.9,
+#     norm      : float  = 1.0,
+#     h         : float  = 0.71,
+#     clabel    : str    = "moline2017"
+# ) -> u.Quantity:
+
+#     """
+#     Computes the total mass in form of subhalos 
+#     located in the spherical shell between rmin and rmax.
+    
+#         :param rmin: Minimum radius
+#         :type rmin: u.Quantity
+#         :param rmax: Maximum radius
+#         :type rmax: u.Quantity
+#         :param msub_min: Minimum mass of the dm subhalos
+#         :type msub_min: u.Quantity
+#         :param msub_max: Maximum mass of the dm subhalos
+#         :type msub_max: u.Quantity
+#         :param rs: Scale radius of the host halo
+#         :type rs: u.Quantity
+#         :param rhos: Scale density ot the host halo
+#         :type rhos: u.Quantity
+#         :param rsat: Saturation radius of the host halo
+#         :type rsat: u.Quantity
+#         :param rhosat: Saturation radius of the host halo
+#         :type rhosat: u.Quantity
+#         :param r200: R200 of the host halo
+#         :type r200: u.Quantity
+#         :param m200: M200 of the host halo
+#         :type m200: u.Quantity
+#         :param sigma_c: Width of the dn/dc distribution [default is 0.13]
+#         :type sigma_c: float
+#         :param index: Index of the SHMF (dn/dm) [default is -1.9]
+#         :type index: float
+#         :param norm: Normalization of the SHMF (dn/dm) [default is 1]
+#         :type norm: float
+#         :param h: Reduced Hubble constant H0/100 [default is 0.71]
+#         :type h: float | None
+#         :param clabel: Label of c-M relation [default is moline2017]
+#         :type clabel: str
+#         :return: Total mass in form of subhalos
+#         :rtype: Quantity
+#     """
+
+#     lunit = rs.unit
+#     dunit = u.Msun/lunit**3
+
+#     rmin_   = rmin.to(lunit)
+#     rmax_   = rmax.to(lunit)
+#     rs_     = rs.to(lunit)
+#     rsat_   = rsat.to(lunit)
+#     r200_   = r200.to(lunit)
+#     mmin_   = convert_mass(msub_min,new_unit=u.Msun)
+#     mmax_   = convert_mass(msub_max,new_unit=u.Msun)
+#     m200_   = convert_mass(m200,new_unit=u.Msun)
+#     rhos_   = convert_density(rhos,new_unit=dunit)
+#     rhosat_ = convert_density(rhosat,new_unit=dunit)
+
+#     def mass_integrand(
+#         c_sub     : float,
+#         mass_halo : float,
+#         r         : float,
+#         rs        : u.Quantity,
+#         rhos      : u.Quantity,
+#         rsat      : u.Quantity,
+#         rhosat    : u.Quantity,
+#         r200      : u.Quantity,
+#         m200      : u.Quantity,
+#         sigma_c   : float      = 0.2,
+#         index     : float      = -1.9,
+#         norm      : float      = 1.0,
+#         h         : float|None = 0.71,
+#         clabel    : str        = "moline2017"        
+#     ):
+
+#         nsub = p_nsub_tot(
+#             c_sub,
+#             mass_halo*u.M_sun,
+#             r*lunit,
+#             rs,
+#             rhos,
+#             rsat,
+#             rhosat,
+#             r200,
+#             m200,
+#             sigma_c,
+#             index,
+#             norm,
+#             h,
+#             clabel=clabel
+#         )
+
+#         # There is no dependence on angular component, 
+#         # then we return the 4*np.pi factor 
+
+#         return 4*np.pi*mass_halo*r**2*(nsub.value)
+    
+#     def compute_c(r,m):
+
+#         c_mean = get_c_sub(
+#             m*u.M_sun,
+#             r*lunit,
+#             r200_,
+#             h=h,
+#             clabel=clabel
+#         )
+
+#         return np.exp(np.log(c_mean) + 8*sigma_c)
+
+#     args=(
+#         rs_,
+#         rhos_,
+#         rsat_,
+#         rhosat_,
+#         r200_,
+#         m200_,
+#         sigma_c,
+#         index,
+#         norm,
+#         h,
+#         clabel
+#     )
+
+#     msub = tplquad(
+#         mass_integrand,
+#         rmin_.value,
+#         rmax_.value,
+#         mmin_.value,
+#         mmax_.value,
+#         1.0,
+#         compute_c,
+#         args=args,
+#     )
+
+#     return msub[0]*u.M_sun
+
 def msub_tot(
     rmin      : u.Quantity,
     rmax      : u.Quantity,
@@ -184,7 +333,7 @@ def msub_tot(
     rhosat_ = convert_density(rhosat,new_unit=dunit)
 
     def mass_integrand(
-        c_sub     : float,
+        # c_sub     : float,
         mass_halo : float,
         r         : float,
         rs        : u.Quantity,
@@ -200,39 +349,16 @@ def msub_tot(
         clabel    : str        = "moline2017"        
     ):
 
-        nsub = p_nsub_tot(
-            c_sub,
-            mass_halo*u.M_sun,
-            r*lunit,
-            rs,
-            rhos,
-            rsat,
-            rhosat,
-            r200,
-            m200,
-            sigma_c,
-            index,
-            norm,
-            h,
-            clabel=clabel
-        )
+        dndm   = p_nsub_m(mass_halo*u.Msun,index,norm).value
+        dndv   = p_nsub_v(r*lunit,rs,rhos,rsat,rhosat,r200,m200).value
+        c_mean = get_c_sub(mass_halo*u.M_sun,r*lunit,r200_,h=h,clabel=clabel)
+        c_max  = np.exp(np.log(c_mean) + 8*sigma_c)
+        diff   = np.log(c_max) - np.log(c_mean)
+        lnnorm = np.log(10)*np.sqrt(2)*sigma_c
+        deltac = 0.5*(erf(diff/lnnorm) - erf(-np.log(c_mean)/lnnorm))
 
-        # There is no dependence on angular component, 
-        # then we return the 4*np.pi factor 
 
-        return 4*np.pi*mass_halo*r**2*(nsub.value)
-    
-    def compute_c(r,m):
-
-        c_mean = get_c_sub(
-            m*u.M_sun,
-            r*lunit,
-            r200_,
-            h=h,
-            clabel=clabel
-        )
-
-        return np.exp(np.log(c_mean) + 8*sigma_c)
+        return 4*np.pi*mass_halo*r**2*dndm*dndv*(deltac)
 
     args=(
         rs_,
@@ -248,19 +374,17 @@ def msub_tot(
         clabel
     )
 
-    msub = tplquad(
+    msub = dblquad(
         mass_integrand,
         rmin_.value,
         rmax_.value,
         mmin_.value,
         mmax_.value,
-        1.0,
-        compute_c,
         args=args,
     )
 
-    return msub[0]*u.M_sun
 
+    return msub[0]*u.M_sun
 
 def nsub_tot(
     rmin      : u.Quantity,
