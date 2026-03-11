@@ -578,35 +578,53 @@ class DMHalo():
         msubmax : u.Quantity
     ) -> u.Quantity :
 
+        logger.info("Computing mass in form of subhalos")
+
         pnorm = self._kw
         nsubs = self._nsub
         rsmax = rsubmax.to(self._rs.unit)
         msmin = convert_mass(msubmin)
         msmax = convert_mass(msubmax)
 
-        edges = np.logspace(
-            np.log10(msmin.value/self._m200.value),
-            np.log10(msmax.value/self._m200.value),
-            self._mpoints
-        )
+        # edges = np.logspace(
+        #     np.log10(msmin.value/self._m200.value),
+        #     np.log10(msmax.value/self._m200.value),
+        #     self._mpoints
+        # )
 
-        m1 = 0*u.Msun
+        # m1 = 0*u.Msun
 
-        for i,j in zip(edges[:-1],edges[1:]):
+        m1 = msub_tot(
+            0*self._rs.unit,
+            rsmax,
+            msmin,
+            msmax,
+            self._rs,
+            self._rhos,
+            self._rsat,
+            self._rhosat,
+            self._r200,
+            self._m200,
+            sigma_c=self._sigmac,
+            norm=1.0
+        )*pnorm*nsubs
 
-            m1 += msub_tot(
-                0*self._rs.unit,
-                rsmax,
-                i*self._m200,
-                j*self._m200,
-                self._rs,
-                self._rhos,
-                self._rsat,
-                self._rhosat,
-                self._r200,
-                self._m200,
-                sigma_c=self._sigmac,
-                norm=1.0
-            )*pnorm*nsubs
+
+        # for i,j in zip(edges[:-1],edges[1:]):
+
+        #     m1 += msub_tot(
+        #         0*self._rs.unit,
+        #         rsmax,
+        #         i*self._m200,
+        #         j*self._m200,
+        #         self._rs,
+        #         self._rhos,
+        #         self._rsat,
+        #         self._rhosat,
+        #         self._r200,
+        #         self._m200,
+        #         sigma_c=self._sigmac,
+        #         norm=1.0
+        #     )*pnorm*nsubs
 
         return m1
