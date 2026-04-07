@@ -21,7 +21,9 @@ from ..astrofactors.jfactor import luminosity_anna_nfw
 from ..astrofactors.dfactor import luminosity_decay_nfw
 from .concentrations import get_c,get_c_sub
 from .dmsource import get_rhosat,get_enclosed_mass_nfw,NFW_profile
-from ..substructure.subhalos import msub_tot,nsub_tot,p_nsub_tot,nsub_r
+from ..substructure.population import SubHaloPopulation
+from ..substructure.samplers import dndm_PL,dndvCoredNFW
+from ..substructure.subhalos import msub_tot,nsub_tot,p_nsub_tot,nsub_r,rhosub
 from ..tools.conversions import convert_mass,convert_density
 
 from ..tools.customerrors import DMProfileError,SubHaloMassError
@@ -125,7 +127,9 @@ class DMHalo():
         # We use M200 as the main halo parameter
         r200_ = np.cbrt(3*self._m200/(800*np.pi*rhoc))
 
-        if r200_/r200 >= 0.01:
+        x = np.abs(r200_ - r200)/r200
+
+        if x >= 0.01:
             msg = (
                 f"Input R200 {r200:0.3f} will be inconsistent "
                 "with the rest of calculations.\n "
@@ -439,32 +443,32 @@ class DMHalo():
 
     def get_kw(self) -> float:
 
-        edges = np.logspace(
-            np.log10(self._msub_min.value/self._m200.value),
-            np.log10(self._msub_max.value/self._m200.value),
-            self._mpoints
+        # edges = np.logspace(
+        #     np.log10(self._msub_min.value/self._m200.value),
+        #     np.log10(self._msub_max.value/self._m200.value),
+        #     self._mpoints
+        # )
+
+        # norm = 0
+
+        # for i,j in zip(edges[:-1],edges[1:]):
+
+        norm = nsub_tot(
+            0*self._r200.unit,
+            self._r200,
+            self._msub_min,
+            self._msub_max,
+            self._rs,
+            self._rhos,
+            self._rsat,
+            self._rhosat,
+            self._r200,
+            self._m200,
+            sigma_c=self._sigmac,
+            norm=1.0,
+            h=self._h,
+            clabel=self._csublabel
         )
-
-        norm = 0
-
-        for i,j in zip(edges[:-1],edges[1:]):
-
-            norm += nsub_tot(
-                0*self._r200.unit,
-                self._r200,
-                i*self._m200,
-                j*self._m200,
-                self._rs,
-                self._rhos,
-                self._rsat,
-                self._rhosat,
-                self._r200,
-                self._m200,
-                sigma_c=self._sigmac,
-                norm=1.0,
-                h=self._h,
-                clabel=self._csublabel
-            )
 
         return 1/norm
 
@@ -478,30 +482,30 @@ class DMHalo():
 
         pnorm = self._kw
 
-        edges = np.logspace(
-            np.log10(self._msub_min.value/self._m200.value),
-            np.log10(self._msub_max.value/self._m200.value),
-            self._mpoints
-        )
+        # edges = np.logspace(
+        #     np.log10(self._msub_min.value/self._m200.value),
+        #     np.log10(self._msub_max.value/self._m200.value),
+        #     self._mpoints
+        # )
 
-        mtot = 0*u.M_sun
+        # mtot = 0*u.M_sun
 
-        for i,j in zip(edges[:-1],edges[1:]):
+        # for i,j in zip(edges[:-1],edges[1:]):
 
-            mtot += msub_tot(
-                0*self._r200.unit,
-                self._r200,
-                i*self._m200,
-                j*self._m200,
-                self._rs,
-                self._rhos,
-                self._rsat,
-                self._rhosat,
-                self._r200,
-                self._m200,
-                sigma_c=self._sigmac,
-                norm=1.0
-            )*pnorm
+        mtot = msub_tot(
+            0*self._r200.unit,
+            self._r200,
+            self._msub_min,
+            self._msub_max,
+            self._rs,
+            self._rhos,
+            self._rsat,
+            self._rhosat,
+            self._r200,
+            self._m200,
+            sigma_c=self._sigmac,
+            norm=1.0
+        )*pnorm
 
         nnorm = self._fsub*self._m200/mtot
 
@@ -586,14 +590,6 @@ class DMHalo():
         msmin = convert_mass(msubmin)
         msmax = convert_mass(msubmax)
 
-        # edges = np.logspace(
-        #     np.log10(msmin.value/self._m200.value),
-        #     np.log10(msmax.value/self._m200.value),
-        #     self._mpoints
-        # )
-
-        # m1 = 0*u.Msun
-
         m1 = msub_tot(
             0*self._rs.unit,
             rsmax,
@@ -609,22 +605,129 @@ class DMHalo():
             norm=1.0
         )*pnorm*nsubs
 
-
-        # for i,j in zip(edges[:-1],edges[1:]):
-
-        #     m1 += msub_tot(
-        #         0*self._rs.unit,
-        #         rsmax,
-        #         i*self._m200,
-        #         j*self._m200,
-        #         self._rs,
-        #         self._rhos,
-        #         self._rsat,
-        #         self._rhosat,
-        #         self._r200,
-        #         self._m200,
-        #         sigma_c=self._sigmac,
-        #         norm=1.0
-        #     )*pnorm*nsubs
-
         return m1
+
+    def rho_tot(self,r:u.Quantity) -> u.Quantity:
+
+        """
+        Total density at a distance r from the center of the cluster.
+
+        :param r: Distance to the cluster's center
+        :type r: u.Quantity
+        :return: Density
+        :rtype: Quantity
+        """
+
+        r_ = r.to(self._rs.unit)
+
+        if self._dmprofile.lower() == "nfw":
+
+            density = NFW_profile(
+                r_,
+                self._rs,
+                self._rhos,
+                self._rsat,
+                self._rhosat,
+                self._r200,
+                length_unit=self._rs.unit
+            )
+
+        return density
+
+    def rho_sub(self,r:u.Quantity) -> u.Quantity:
+
+        """
+        Docstring for rho_sub
+
+        :param r: Distance to the center of the cluster
+        :type r: u.Quantity
+        :return: Average subhalo mass density 
+        :rtype: Quantity
+        """
+
+        r_ = r.to(self._rs.unit)
+
+        density = rhosub(
+            r_,
+            self._msub_min,
+            self._msub_max,
+            self._rs,
+            self._rhos,
+            self._rsat,
+            self._rhosat,
+            self._r200,
+            self._m200,
+            self._sigmac,
+            self._indexpm,
+            h      = self._h,
+            clabel = self._csublabel
+        )
+
+        return density * self._kw * self._nsub
+
+    def sh_population(self):
+
+        """
+        Returning all the parameters associated with the subhalo
+        population. The paremeters are radial position, masses, 
+        concentrations and cartesian coordinates
+
+        """
+
+        from scipy.stats import norm,lognorm
+        from time import time
+
+        msh_sampler = dndm_PL(
+            alpha = self._indexpm,
+            m_min = self._msub_min.value,
+            m_max = self._msub_max.value
+        )
+
+        masses = msh_sampler.rvs(
+            size         = self._nsub,
+            random_state = int(time())
+        )*u.Msun
+
+        rsh_sampler = dndvCoredNFW(
+            self._rs.value,
+            self._rsat.value,
+            self._r200.value
+        )
+
+        rpositions = rsh_sampler.rvs(
+            size         = self._nsub,
+            random_state = int(time())
+        )*self._rs.unit
+
+        x,y,z  = norm.rvs(size=(3,rpositions.value.size))
+        r_unit = np.sqrt(x**2+y**2+z**2)
+
+        x_sh = x*rpositions/r_unit + self._cart.x
+        y_sh = y*rpositions/r_unit + self._cart.y
+        z_sh = z*rpositions/r_unit + self._cart.z
+
+
+        c_mean = get_c_sub(
+            masses,
+            rpositions,
+            self._r200,
+            self._h,
+            self._csublabel
+        )
+
+        c_vals = lognorm.rvs(
+            self._sigmac*np.log(10),
+            scale=c_mean,
+            size=self._nsub
+        )
+
+        this_shpop = SubHaloPopulation(
+            masses,
+            rpositions,
+            x_sh,
+            y_sh,
+            z_sh,
+            c_vals
+        )
+
+        return this_shpop
