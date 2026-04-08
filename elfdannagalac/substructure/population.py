@@ -32,28 +32,59 @@ class SubhaloView:
     
     @property
     def mass(self):
+
         return self._container._msh[self._idx]
     
     @property
     def r(self):
+
         return self._container._rsh[self._idx]
     
     @property
     def x(self):
+
         return self._container._xsh[self._idx]
     
     @property
     def y(self):
+
         return self._container._ysh[self._idx]
     
     @property
     def z(self):
+
         return self._container._zsh[self._idx]
     
     @property
     def c(self):
+
         return self._container._csh[self._idx]
     
+    @property
+    def r200(self):
+
+        return self._container._r200[self._idx]
+
+    @property
+    def rs(self):
+
+        return self._container._rs[self._idx]
+
+    @property
+    def rhos(self):
+
+        return self._container._rhos[self._idx]
+    
+    @property
+    def lanna(self):
+
+        return self._container._lanna[self._idx]
+
+    @property
+    def cross(self):
+
+        return self._container._cross[self._idx]
+
     def __repr__(self):
         return f"<Subhalo {self._idx}: mass={self.mass}, r={self.r}>"
 
@@ -61,29 +92,45 @@ class SubHaloPopulation():
 
     def __init__(
         self,
-        masses : u.Quantity,
+        masses     : u.Quantity,
         rpositions : u.Quantity,
         xsh        : u.Quantity,
         ysh        : u.Quantity,
         zsh        : u.Quantity,
-        csh_vals   : np.ndarray
+        csh_vals   : np.ndarray,
+        r200_vals  : u.Quantity,
+        rhos_vals  : u.Quantity,
+        rs_vals    : u.Quantity,
+        lanna_vals : u.Quantity,
+        cross_vals : u.Quantity
     ) -> None:
         
         n = len(masses)
 
-        if not all(len(arr) == n for arr in (rpositions,xsh,ysh,zsh,csh_vals)):
+        pars = (
+            rpositions,xsh,ysh,zsh,csh_vals,
+            r200_vals,rhos_vals,rs_vals,
+            lanna_vals,cross_vals
+        )
+
+        if not all(len(arr) == n for arr in pars):
             msg = "Initial population arrays have not the same size"
             logger.error(repr(ValueError(msg)))
 
         lunit = rpositions.unit
 
-        self._msh  = masses.to(u.Msun)
-        self._rsh  = rpositions
-        self._xsh  = xsh.to(lunit)
-        self._ysh  = ysh.to(lunit)
-        self._zsh  = zsh.to(lunit)
-        self._csh  = csh_vals
-        self._nsub = n
+        self._msh   = masses.to(u.Msun)
+        self._rsh   = rpositions
+        self._xsh   = xsh.to(lunit)
+        self._ysh   = ysh.to(lunit)
+        self._zsh   = zsh.to(lunit)
+        self._csh   = csh_vals
+        self._r200  = r200_vals
+        self._rhos  = rhos_vals
+        self._rs    = rs_vals
+        self._lanna = lanna_vals
+        self._cross = cross_vals
+        self._nsub  = n
 
     def __len__(self) -> int:
 
@@ -121,7 +168,12 @@ class SubHaloPopulation():
                 xsh        = self.x[index],
                 ysh        = self.y[index],
                 zsh        = self.z[index],
-                csh_vals   = self.c[index]
+                csh_vals   = self.c[index],
+                r200_vals  = self.r200[index],
+                rhos_vals  = self.rhos[index],
+                rs_vals    = self.rs[index],
+                lanna_vals = self.lanna[index],
+                cross_vals = self.cross[index]
             )
         
         else:
@@ -137,6 +189,11 @@ class SubHaloPopulation():
         yvals       : Union[list,np.ndarray],
         zvals       : Union[list,np.ndarray],
         cvals       : Union[list,np.ndarray],
+        r200vals    : Union[list,np.ndarray],
+        rhosvals    : Union[list,np.ndarray],
+        rsvals      : Union[list,np.ndarray],
+        lannavals   : Union[list,np.ndarray],
+        crossvals   : Union[list,np.ndarray],
         mass_unit   : u.Unit = u.Msun,
         length_unit : u.Unit = u.kpc
     ) -> "SubHaloPopulation":
@@ -164,14 +221,22 @@ class SubHaloPopulation():
         :rtype: SubHaloPopulation
         """
 
-        masses     = np.asarray(mass_vals) * mass_unit
-        rpositions = np.asarray(rpos_vals) * length_unit
-        x_sh       = np.asarray(xvals) * length_unit
-        y_sh       = np.asarray(yvals) * length_unit
-        z_sh       = np.asarray(zvals) * length_unit
+        masses     = np.asarray(mass_vals)*mass_unit
+        rpositions = np.asarray(rpos_vals)*length_unit
+        x_sh       = np.asarray(xvals)*length_unit
+        y_sh       = np.asarray(yvals)*length_unit
+        z_sh       = np.asarray(zvals)*length_unit
         csh_vals   = np.asarray(cvals)
+        r200_vals  = np.asarray(r200vals)*length_unit
+        rhos_vals  = np.asarray(rhosvals)*mass_unit/length_unit**3
+        rs_vals    = np.asarray(rsvals)*length_unit
+        lanna_vals = np.asarray(lannavals)*mass_unit**2/length_unit**3
+        cross_vals = np.asarray(crossvals)*mass_unit**2/length_unit**3
 
-        return cls(masses,rpositions,x_sh,y_sh,z_sh,csh_vals)
+        return cls(
+            masses,rpositions,x_sh,y_sh,z_sh,csh_vals,
+            r200_vals,rhos_vals,rs_vals,lanna_vals,cross_vals
+        )
 
     @classmethod
     def from_qtable(cls,table: QTable) -> "SubHaloPopulation":
@@ -180,14 +245,18 @@ class SubHaloPopulation():
         rpositions,x,y,z,concentration).
         """
         return cls(
-            mass       = table["msh"].quantity,
-            rpositions = table["rsh"].quantity,
-            x_sh       = table["xsh"].quantity,
-            y_sh       = table["ysh"].quantity,
-            z_sh       = table["zsh"].quantity,
-            csh_vals   = table.get("csh",None)
+            masses     = table["msh"],
+            rpositions = table["rsh"],
+            xsh        = table["xsh"],
+            ysh        = table["ysh"],
+            zsh        = table["zsh"],
+            csh_vals   = table["csh"],
+            r200_vals  = table["r200"],
+            rhos_vals  = table["rhos"],
+            rs_vals    = table["rs"],
+            lanna_vals = table["lanna"],
+            cross_vals = table["cross"]
         )
-
 
     def to_qtable(self) -> QTable:
 
@@ -197,12 +266,17 @@ class SubHaloPopulation():
 
         return QTable(
             {
-                "msh": self._msh,
-                "rsh": self._rsh,
-                "xsh": self._xsh,
-                "ysh": self._ysh,
-                "zsh": self._zsh,
-                "csh": self._csh
+                "msh"   : self._msh,
+                "rsh"   : self._rsh,
+                "xsh"   : self._xsh,
+                "ysh"   : self._ysh,
+                "zsh"   : self._zsh,
+                "csh"   : self._csh,
+                "r200"  : self._r200,
+                "rhos"  : self._rhos,
+                "rs"    : self._rs,
+                "lanna" : self._lanna,
+                "cross" : self._cross
             }
         )
 
@@ -228,6 +302,4 @@ class SubHaloPopulation():
         tbl = QTable.read(filename,format='fits')
 
         return cls.from_qtable(tbl)
-
-
 
