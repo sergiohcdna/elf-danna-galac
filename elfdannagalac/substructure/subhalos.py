@@ -605,22 +605,48 @@ def rhosub(
 
         return mass_halo*dndm*deltac
 
-    args=(
-        r_.value,
-        r200_,
-        sigma_c,
-        index,
-        norm,
-        h,
-        clabel
-    )
+    if r_.shape == () :
 
-    m_av = quad(
-        mass_integrand,
-        mmin_.value,
-        mmax_.value,
-        args=args,
-    )
+        args=(
+            r_.value,
+            r200_,
+            sigma_c,
+            index,
+            norm,
+            h,
+            clabel
+        )
 
-    return m_av[0]*u.M_sun*dndv
+        m_av = quad(
+            mass_integrand,
+            mmin_.value,
+            mmax_.value,
+            args=args,
+        )[0]
+
+    else :
+
+        m_av = np.zeros_like(r_.value)
+
+        for i,thisr in enumerate(r_):
+
+            args=(
+                thisr.value,
+                r200_,
+                sigma_c,
+                index,
+                norm,
+                h,
+                clabel
+            )
+
+            m_av[i] = quad(
+                mass_integrand,
+                mmin_.value,
+                mmax_.value,
+                args=args,
+            )[0]
+
+
+    return m_av*u.Msun*dndv
 
