@@ -21,6 +21,7 @@ from ..astrofactors.jfactor import luminosity_anna_nfw
 from ..astrofactors.dfactor import luminosity_decay_nfw
 from .concentrations import get_c,get_c_sub
 from .dmsource import get_rhosat,get_enclosed_mass_nfw,NFW_profile
+from .smooth import get_smooth_dm_density
 from ..substructure.population import SubHaloPopulation
 from ..substructure.samplers import dndm_PL,dndvCoredNFW
 from ..substructure.subhalos import msub_tot,nsub_tot,p_nsub_tot,nsub_r,rhosub
@@ -122,6 +123,7 @@ class DMHalo():
         self._z         = z
         self._clabel    = clabel,
         self._m200      = convert_mass(m200,new_unit=u.Msun)
+        self._rhoc      = rhoc
 
         # We need to check that R200 is consistent with the value of M200
         # We use M200 as the main halo parameter
@@ -665,6 +667,31 @@ class DMHalo():
 
         return density * self._kw * self._nsub
 
+    def rho_smooth(self,r:u.Quantity) -> u.Quantity:
+
+        r_ = r.to(self._rs.unit)
+
+        density = get_smooth_dm_density(
+            r_,
+            self._rs,
+            self._rhos,
+            self._rsat,
+            self._rhosat,
+            self._r200,
+            self._m200,
+            self._msub_min,
+            self._msub_max,
+            self._sigmac,
+            self._indexpm,
+            self._h,
+            self._kw,
+            self._nsub,
+            self._dmprofile,
+            self._csublabel
+        )
+
+        return density
+
     def sh_population(self):
 
         """
@@ -706,7 +733,6 @@ class DMHalo():
         y_sh = y*rpositions/r_unit + self._cart.y
         z_sh = z*rpositions/r_unit + self._cart.z
 
-
         c_mean = get_c_sub(
             masses,
             rpositions,
@@ -721,13 +747,27 @@ class DMHalo():
             size=self._nsub
         )
 
+        r200_vals  = np.cbrt(3*masses/(800*np.pi*self._rhoc))
+        logterm    = np.log(1+c_vals) - c_vals/(1+c_vals)
+        denterm    = 1 - 1/(1+c_vals)**3
+        rhos_vals  = 200*self._rhoc*c_vals**3/(3*logterm)
+        rs_vals    = r200_vals/c_vals
+        lanna_vals = 4*np.pi*rhos_vals**2*rs_vals**3/(3*denterm)
+        cross_vals = 2*self.rho_smooth(rpositions)*masses
+
+
         this_shpop = SubHaloPopulation(
             masses,
             rpositions,
             x_sh,
             y_sh,
             z_sh,
-            c_vals
+            c_vals,
+            r200_vals,
+            rhos_vals,
+            rs_vals,
+            lanna_vals,
+            cross_vals
         )
 
         return this_shpop
