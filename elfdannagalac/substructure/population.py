@@ -163,17 +163,17 @@ class SubHaloPopulation():
         if isinstance(index,slice):
             # Return a new container for slices (efficient, no copy unless needed)
             return SubHaloPopulation(
-                mass       = self.mass[index],
-                rpositions = self.r[index],
-                xsh        = self.x[index],
-                ysh        = self.y[index],
-                zsh        = self.z[index],
-                csh_vals   = self.c[index],
-                r200_vals  = self.r200[index],
-                rhos_vals  = self.rhos[index],
-                rs_vals    = self.rs[index],
-                lanna_vals = self.lanna[index],
-                cross_vals = self.cross[index]
+                masses     = self._msh[index],
+                rpositions = self._rsh[index],
+                xsh        = self._xsh[index],
+                ysh        = self._ysh[index],
+                zsh        = self._zsh[index],
+                csh_vals   = self._csh[index],
+                r200_vals  = self._r200[index],
+                rhos_vals  = self._rhos[index],
+                rs_vals    = self._rs[index],
+                lanna_vals = self._lanna[index],
+                cross_vals = self._cross[index]
             )
         
         else:
