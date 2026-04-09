@@ -12,9 +12,10 @@ from .concentrations import get_c,get_c_sub
 from .grids import (
     SmoothDMHaloMassDensityGrid,
     SmoothDMHaloMassSquaredDensityGrid,
-    preparePointLikeDMSource,
-    prepareSmoothExtendedDMSource,
 )
 
 from .halo import DMHalo
 from .smooth import get_smooth_dm_density
+from .sources import preparePointLikeDMSource,prepareSmoothExtendedDMSource
+
+
