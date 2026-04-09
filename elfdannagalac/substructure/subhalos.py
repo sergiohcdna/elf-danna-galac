@@ -17,7 +17,6 @@ from scipy.integrate import quad,dblquad
 from scipy.special import erf
 
 from ..dmsrc.concentrations import get_c_sub
-from .subhalo_dndc import p_nsub_c
 from .subhalo_dndm import p_nsub_m
 from .subhalo_dndv import p_nsub_v
 
@@ -105,6 +104,7 @@ def p_nsub_tot(
         :rtype: Quantity
     """
 
+    from .subhalo_dndc import p_nsub_c
 
     dndm = p_nsub_m(mass_halo,index,norm)
     dndv = p_nsub_v(r,rs,rhos,rsat,rhosat,r200,m200)
