@@ -13,7 +13,7 @@
 import astropy.units as u
 import numpy as np
 
-from scipy.integrate import quad,dblquad,tplquad
+from scipy.integrate import quad,dblquad
 from scipy.special import erf
 
 from ..dmsrc.concentrations import get_c_sub
