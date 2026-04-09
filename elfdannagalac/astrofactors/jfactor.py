@@ -18,6 +18,7 @@ from scipy.integrate import quad
 from ..dmsrc.dmsource import NFW_profile
 from ..dmsrc.smooth import get_smooth_dm_density
 from ..substructure.population import SubHaloPopulation
+from ..substructure.subhalos import rhosub
 
 from ..tools.conversions import convert_density
 
@@ -111,7 +112,7 @@ def luminosity_anna_nfw_tot(
     rhos      : u.Quantity,
     rsat      : u.Quantity,
     rhosat    : u.Quantity,
-    rtrunc    : u.Quantity,
+    r200      : u.Quantity,
     m200      : u.Quantity,
     msub_min  : u.Quantity,
     msub_max  : u.Quantity,
@@ -167,25 +168,31 @@ def luminosity_anna_nfw_tot(
     rhosat_ = convert_density(rhosat,new_unit=dunit)
 
     args = (
-        rs,rhos_,rsat,rhosat_,rtrunc,
+        rs,rhos_,rsat,rhosat_,r200,
         m200,msub_min,msub_max,
         sigmac,indexpm,h,kw,nsub,csublabel
     )
 
     def integrand(
-        r,rs,rhos,rsat,rhosat,rtrunc,
+        r,rs,rhos,rsat,rhosat,r200,
         m200,msub_min,msub_max,sigmac,
         indexpm,h,kw,nsub,csublabel
     ):
 
         rho_smooth = get_smooth_dm_density(
-            r*lunit,rs,rhos,rsat,rhosat,rtrunc,
+            r*lunit,rs,rhos,rsat,rhosat,r200,
             m200,msub_min,msub_max,sigmac,
-            indexpm,h=h,clabel=csublabel
-        )* kw * nsub
+            indexpm,h,kw,nsub,csublabel=csublabel
+        ).value
 
 
-        return r**2*rho_smooth**2
+        rho_sub = rhosub(
+            r*lunit,msub_min,msub_max,rs,rhos,rsat,
+            rhosat,r200,m200,sigmac,indexpm,h=h,
+            clabel=csublabel
+        ).value
+
+        return r**2*(rho_smooth**2 + rho_sub**2 + 2*rho_smooth*rho_sub)
 
     l_01 = quad(
         integrand,
@@ -208,9 +215,13 @@ def luminosity_anna_nfw_tot(
         args=args
     )[0]
 
-    lsubs  = np.sum(sh_pop.to_qtable()["lanna"]).to(units)
-    lcross = np.sum(sh_pop.to_qtable()["cross"]).to(units)
+    # lsubs  = np.sum(sh_pop.to_qtable()["lanna"]).to(units)
+    # lcross = np.sum(sh_pop.to_qtable()["cross"]).to(units)
 
-    total_anna = 4*np.pi*(l_01+l_02+l_03)*units + lsubs + lcross
+    # print(4*np.pi*(l_01+l_02+l_03)*units)
+    # print(lsubs)
+    # print(lcross)
+
+    total_anna = 4*np.pi*(l_01+l_02+l_03)*units # + lsubs + lcross
 
     return total_anna
