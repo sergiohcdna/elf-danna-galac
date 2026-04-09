@@ -31,15 +31,24 @@ from ..magneticfield.bfields import get_cluster_field
 from ..observer.observers import preparePhotonObserver
 
 from ..dmsrc.dmsource import (
-    SmoothDMHaloMassDensityGrid,
-    SmoothDMHaloMassSquaredDensityGrid,
     preparePointLikeDMSource,
     prepareSmoothExtendedDMSource,
     dm_mass_density,
 )
 
+from ..dmsrc.grids import (
+    SmoothDMHaloMassDensityGrid,
+    SmoothDMHaloMassSquaredDensityGrid
+)
+
 from ..dmsrc.dmsource import allowed_spatial_types,allowed_profiles
 from ..dmsrc.halo import DMHalo
+
+from ..dmsrc.sources import (
+    preparePointLikeDMSource,
+    prepareSmoothExtendedDMSource,
+)
+
 from ..dmspectrum.dmspectra import ALLOWED_PROCESSES
 
 from ..tools.utils import create_table,prepareOutput
