@@ -17,7 +17,7 @@ from astropy.constants import G
 from astropy.coordinates import SkyCoord
 from astropy.cosmology import FlatLambdaCDM
 
-from ..astrofactors.jfactor import luminosity_anna_nfw
+from ..astrofactors.jfactor import luminosity_anna_nfw,luminosity_anna_nfw_tot
 from ..astrofactors.dfactor import luminosity_decay_nfw
 from .concentrations import get_c,get_c_sub
 from .dmsource import get_rhosat,get_enclosed_mass_nfw,NFW_profile
@@ -189,6 +189,12 @@ class DMHalo():
         self._coord = SkyCoord(ra=ra,dec=dec,frame="icrs",distance=self._dlum)
         self._cart  = self._coord.cartesian
 
+        self._shpop      = self.sh_population()
+        self._lannasub   = self.get_lanna_sub()
+        self._lannasubpp = (self._lannasub*(
+            (1.0*u.M_sun).to(u.GeV,equivalencies=u.mass_energy())**2
+        )/u.M_sun**2).to(u.GeV**2/u.cm**3)
+
         return
 
     @property
@@ -270,7 +276,22 @@ class DMHalo():
     def nsubs(self):
 
         return self._nsub
+
+    @property
+    def shpop(self):
+
+        return self._shpop
     
+    @property
+    def l_dm_anna_sub(self):
+
+        return self._lannasub
+    
+    @property
+    def lanna_sub_pp(self):
+
+        return self._lannasubpp
+
     @property
     def sigmac(self):
 
@@ -324,10 +345,12 @@ class DMHalo():
     @property
     def info(self):
 
-        ldma = self._lannapp*self._dmsigmav/self._dmmas
-        ldma = ldma.to(u.erg/u.s,equivalencies=u.mass_energy())
-        ldmd = self._ldecaypp/(1e27*u.s)
-        ldmd = ldmd.to(u.erg/u.s,equivalencies=u.mass_energy())
+        ldma    = self._lannapp*self._dmsigmav/self._dmmas
+        ldma    = ldma.to(u.erg/u.s,equivalencies=u.mass_energy())
+        ldmd    = self._ldecaypp/(1e27*u.s)
+        ldmd    = ldmd.to(u.erg/u.s,equivalencies=u.mass_energy())
+        ldmasub = self._lannasubpp*self._dmsigmav/self._dmmas
+        ldmasub = ldmasub.to(u.erg/u.s,equivalencies=u.mass_energy())
 
         msg = (
             f"\n{self._name} cluster configured with: \n"
@@ -349,9 +372,12 @@ class DMHalo():
             f"({self._fsub*100.0}% of the cluster mass)\n"
             f"\t- Annihilation emissivity [No sub]: {self._lanna:0.3e} "
             f"({self._lannapp:0.3e})\n"
+            f"\t- Annihilation emissivity [With sub]: {self._lannasub:0.3e} "
+            f"({self._lannasubpp:0.3e})\n"
             f"\t- Decay emissivity [No sub]: {self._ldecay:0.3e} "
             f"({self._ldecaypp:0.3e})\n"
             f"\t- DM luminosity [Annihilation, No sub]: {ldma:0.5e}\n"
+            f"\t- DM luminosity [Annihilation, With sub]: {ldmasub:0.5e}\n"
             f"\t- DM luminosity [Decay, No sub]: {ldmd:0.5e}\n"
         )
 
@@ -404,6 +430,36 @@ class DMHalo():
                 self._rsat,
                 self._rhosat,
                 self._r200,
+            )
+
+        else:
+
+            logger.error(repr(DMProfileError("Unknown DM profile")))
+            e_tot = 0*u.M_sun**2/u.Mpc**3
+
+        return e_tot
+
+    def get_lanna_sub(self) -> u.Quantity:
+
+        if self._dmprofile.lower() == "nfw":
+
+            e_tot = luminosity_anna_nfw_tot(
+                self._r200,
+                self._rs,
+                self._rhos,
+                self._rsat,
+                self._rhosat,
+                self._r200,
+                self._m200,
+                self._msub_min,
+                self._msub_max,
+                self._sigmac,
+                self._indexpm,
+                self._h,
+                self._kw,
+                self._nsub,
+                self._shpop,
+                self._csublabel
             )
 
         else:
