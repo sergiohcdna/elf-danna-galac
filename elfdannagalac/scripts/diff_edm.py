@@ -30,11 +30,7 @@ from crpropa import ModuleList
 from ..magneticfield.bfields import get_cluster_field
 from ..observer.observers import preparePhotonObserver
 
-from ..dmsrc.dmsource import (
-    preparePointLikeDMSource,
-    prepareSmoothExtendedDMSource,
-    dm_mass_density,
-)
+from ..dmsrc.dmsource import dm_mass_density
 
 from ..dmsrc.grids import (
     SmoothDMHaloMassDensityGrid,
