@@ -15,7 +15,7 @@ import numpy as np
 
 from scipy.integrate import quad
 
-from ..dmsrc.dmsource import NFW_profile
+from ..dmsrc.profiles import NFW_profile
 from ..dmsrc.smooth import get_smooth_dm_density
 from ..substructure.population import SubHaloPopulation
 from ..substructure.subhalos import rhosub
@@ -114,15 +114,8 @@ def luminosity_anna_nfw_tot(
     rhosat    : u.Quantity,
     r200      : u.Quantity,
     m200      : u.Quantity,
-    msub_min  : u.Quantity,
-    msub_max  : u.Quantity,
-    sigmac    : u.Quantity,
-    indexpm   : float,
-    h         : float,
-    kw        : float,
-    nsub      : int,
-    sh_pop    : SubHaloPopulation,
-    csublabel : str = "moline2017"
+    mshav     : u.Quantity,
+    # sh_pop    : SubHaloPopulation,
 ) -> u.Quantity:
 
     r"""
@@ -169,27 +162,23 @@ def luminosity_anna_nfw_tot(
 
     args = (
         rs,rhos_,rsat,rhosat_,r200,
-        m200,msub_min,msub_max,
-        sigmac,indexpm,h,kw,nsub,csublabel
+        m200,mshav
     )
 
     def integrand(
         r,rs,rhos,rsat,rhosat,r200,
-        m200,msub_min,msub_max,sigmac,
-        indexpm,h,kw,nsub,csublabel
+        m200,mshav
     ):
 
         rho_smooth = get_smooth_dm_density(
             r*lunit,rs,rhos,rsat,rhosat,r200,
-            m200,msub_min,msub_max,sigmac,
-            indexpm,h,kw,nsub,csublabel=csublabel
+            m200,mshav
         ).value
 
 
         rho_sub = rhosub(
-            r*lunit,msub_min,msub_max,rs,rhos,rsat,
-            rhosat,r200,m200,sigmac,indexpm,h=h,
-            clabel=csublabel
+            r*lunit,rs,rhos,rsat,
+            rhosat,r200,m200,mshav
         ).value
 
         return r**2*(rho_smooth**2 + rho_sub**2 + 2*rho_smooth*rho_sub)
