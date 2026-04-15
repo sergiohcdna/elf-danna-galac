@@ -1,5 +1,5 @@
-from .dmsource import allowed_profiles,allowed_spatial_types
-from .dmsource import (
+from .profiles import allowed_profiles,allowed_spatial_types
+from .profiles import (
     NFW_profile,
     dm_mass_density,
     get_rhosat,
