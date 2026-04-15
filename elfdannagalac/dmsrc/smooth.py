@@ -12,7 +12,7 @@
 
 import astropy.units as u
 
-from .dmsource import NFW_profile
+from .profiles import NFW_profile
 from ..substructure.subhalos import rhosub
 
 from ..tools.customerrors import DMProfileError
@@ -28,15 +28,8 @@ def get_smooth_dm_density(
     rhosat    : u.Quantity,
     rtrunc    : u.Quantity,
     m200      : u.Quantity,
-    msub_min  : u.Quantity,
-    msub_max  : u.Quantity,
-    sigmac    : u.Quantity,
-    indexpm   : float,
-    h         : float,
-    kw        : float,
-    nsub      : int,
+    mshav     : u.Quantity,
     dmprofile : str = "nfw",
-    csublabel : str = "moline2017"
 ) -> u.Quantity:
 
     if dmprofile.lower() == "nfw":
@@ -53,19 +46,14 @@ def get_smooth_dm_density(
 
         rho_sub = rhosub(
             r.to(rs.unit),
-            msub_min,
-            msub_max,
             rs,
             rhos,
             rsat,
             rhosat,
             rtrunc,
             m200,
-            sigmac,
-            indexpm,
-            h      = h,
-            clabel = csublabel
-        )* kw * nsub
+            mshav
+        )
 
     else:
 
