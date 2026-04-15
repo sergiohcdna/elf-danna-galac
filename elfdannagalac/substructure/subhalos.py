@@ -13,7 +13,7 @@
 import astropy.units as u
 import numpy as np
 
-from scipy.integrate import quad,dblquad
+from scipy.integrate import quad,dblquad,quad_vec
 from scipy.special import erf
 
 from ..dmsrc.concentrations import get_c_sub
@@ -21,21 +21,6 @@ from .subhalo_dndm import p_nsub_m
 from .subhalo_dndv import p_nsub_v
 
 from ..tools.conversions import convert_mass,convert_density
-
-# GENERAL NOTE:
-# The most difficult integral comes from the mass term 
-# And, I am still trying to figure out how to optimize 
-# the integration intervals to speed up the calculations. 
-# The problem is the power-law used to describe dndm. 
-# Then, for smaller and smaller values of mass 
-# scipy routines take more and more time.
-# For example, for subhalo masses in the range from 
-# 1e-5*M_200 to 1e-3*M_200, the integral took 3 min.
-# We will compute the total mass in form of subhalos 
-# in three log-intervals between 1e-5*M_200 and 1e-2*M_200. 
-# Following previous works, we can assume that the 
-# total mass in the range from 1e-5*M_200 to 1e-2*M_200 
-# is approximately 0.11*M_200.
 
 def p_nsub_tot(
     c_sub     : float,
@@ -520,16 +505,11 @@ def nsub_r(
 
     return nsub[0]*units
 
-def rhosub(
+def msh_average(
     r         : u.Quantity,
     msub_min  : u.Quantity,
     msub_max  : u.Quantity,
-    rs        : u.Quantity,
-    rhos      : u.Quantity,
-    rsat      : u.Quantity,
-    rhosat    : u.Quantity,
     r200      : u.Quantity,
-    m200      : u.Quantity,
     sigma_c   : float  = 0.13,
     index     : float  = -1.9,
     norm      : float  = 1.0,
@@ -538,25 +518,21 @@ def rhosub(
 ) -> u.Quantity:
 
     """
-    Computes the density associated to subhalos 
+    Computes the average mass of subhalos 
     at a distance r from the center of the host halo.
+    This is without considering the normalization factors 
+    from the total subhalo PDFs.
+
+    In case that the mass of the subhalo does not depends 
+    on the radial position of the subhalo itself, then 
+    the average mass of subhalos is the same across the host.
     
         :param msub_min: Minimum mass of the dm subhalos
         :type msub_min: u.Quantity
         :param msub_max: Maximum mass of the dm subhalos
         :type msub_max: u.Quantity
-        :param rs: Scale radius of the host halo
-        :type rs: u.Quantity
-        :param rhos: Scale density ot the host halo
-        :type rhos: u.Quantity
-        :param rsat: Saturation radius of the host halo
-        :type rsat: u.Quantity
-        :param rhosat: Saturation radius of the host halo
-        :type rhosat: u.Quantity
         :param r200: R200 of the host halo
         :type r200: u.Quantity
-        :param m200: M200 of the host halo
-        :type m200: u.Quantity
         :param sigma_c: Width of the dn/dc distribution [default is 0.13]
         :type sigma_c: float
         :param index: Index of the SHMF (dn/dm) [default is -1.9]
@@ -571,23 +547,14 @@ def rhosub(
         :rtype: Quantity
     """
 
-    lunit = rs.unit
-    dunit = u.Msun/lunit**3
-
+    lunit   = r200.unit
     r_      = r.to(lunit)
-    rs_     = rs.to(lunit)
-    rsat_   = rsat.to(lunit)
-    r200_   = r200.to(lunit)
     mmin_   = convert_mass(msub_min,new_unit=u.Msun)
     mmax_   = convert_mass(msub_max,new_unit=u.Msun)
-    m200_   = convert_mass(m200,new_unit=u.Msun)
-    rhos_   = convert_density(rhos,new_unit=dunit)
-    rhosat_ = convert_density(rhosat,new_unit=dunit)
-    dndv    = p_nsub_v(r_,rs_,rhos_,rsat_,rhosat_,r200_,m200_)
 
     def mass_integrand(
         mass_halo : float,
-        r         : float,
+        r         : u.Quantity,
         r200      : u.Quantity,
         sigma_c   : float      = 0.13,
         index     : float      = -1.9,
@@ -597,7 +564,7 @@ def rhosub(
     ):
 
         dndm   = p_nsub_m(mass_halo*u.Msun,index,norm).value
-        c_mean = get_c_sub(mass_halo*u.M_sun,r*lunit,r200,h=h,clabel=clabel)
+        c_mean = get_c_sub(mass_halo*u.M_sun,r,r200,h=h,clabel=clabel)
         c_max  = np.exp(np.log(c_mean) + 8*sigma_c)
         diff   = np.log(c_max) - np.log(c_mean)
         lnnorm = np.log(10)*np.sqrt(2)*sigma_c
@@ -608,8 +575,8 @@ def rhosub(
     if r_.shape == () :
 
         args=(
-            r_.value,
-            r200_,
+            r_,
+            r200,
             sigma_c,
             index,
             norm,
@@ -626,27 +593,80 @@ def rhosub(
 
     else :
 
-        m_av = np.zeros_like(r_.value)
+        r_flat     = r_.ravel()
+        mask       = r_ <= r200
+        mask_flat  = mask.ravel()
+        active_idx = np.where(mask_flat)[0]
+        m_av       = np.zeros_like(r_flat.value)
+        r_active   = r_flat[active_idx]
 
-        for i,thisr in enumerate(r_):
+        args=(
+            r_active,
+            r200,
+            sigma_c,
+            index,
+            norm,
+            h,
+            clabel
+        )
 
-            args=(
-                thisr.value,
-                r200_,
-                sigma_c,
-                index,
-                norm,
-                h,
-                clabel
-            )
+        res = quad_vec(
+            mass_integrand,
+            mmin_.value,
+            mmax_.value,
+            args=args
+        )[0]
 
-            m_av[i] = quad(
-                mass_integrand,
-                mmin_.value,
-                mmax_.value,
-                args=args,
-            )[0]
+        m_av[active_idx] = res
 
+        m_av = m_av.reshape(r_.shape)
 
-    return m_av*u.Msun*dndv
+    return m_av*u.Msun
+
+def rhosub(
+    r      : u.Quantity,
+    rs     : u.Quantity,
+    rhos   : u.Quantity,
+    rsat   : u.Quantity,
+    rhosat : u.Quantity,
+    r200   : u.Quantity,
+    m200   : u.Quantity,
+    mshav  : u.Quantity
+) -> u.Quantity:
+
+    """
+    Computes the density associated to subhalos 
+    at a distance r from the center of the host halo.
+
+        :param rs: Scale radius of the host halo
+        :type rs: u.Quantity
+        :param rhos: Scale density ot the host halo
+        :type rhos: u.Quantity
+        :param rsat: Saturation radius of the host halo
+        :type rsat: u.Quantity
+        :param rhosat: Saturation radius of the host halo
+        :type rhosat: u.Quantity
+        :param r200: R200 of the host halo
+        :type r200: u.Quantity
+        :param m200: M200 of the host halo
+        :type m200: u.Quantity
+        :param mshav: Average mass of subhalos as a function of r
+        :type mshav: u.Quantity
+        :return: Total mass in form of subhalos
+        :rtype: Quantity
+    """
+
+    lunit = rs.unit
+    dunit = u.Msun/lunit**3
+
+    r_      = r.to(lunit)
+    rs_     = rs.to(lunit)
+    rsat_   = rsat.to(lunit)
+    r200_   = r200.to(lunit)
+    m200_   = convert_mass(m200,new_unit=u.Msun)
+    rhos_   = convert_density(rhos,new_unit=dunit)
+    rhosat_ = convert_density(rhosat,new_unit=dunit)
+    dndv    = p_nsub_v(r_,rs_,rhos_,rsat_,rhosat_,r200_,m200_)
+
+    return mshav*dndv
 
