@@ -2,7 +2,6 @@
 # Diffusion of electrons  in the intraclluster medium of galaxy clusters      #
 #   - Preparing DM profiles used for source injection                         #
 #   - Including units                                                         #
-#   - Replace list of parameters by DMHalo class                              #
 #   - Removing some functions                                                 #
 #   - Add a truncation radius to set densities to zero fi r > rtrunc          #
 #-----------------------------------------------------------------------------#
