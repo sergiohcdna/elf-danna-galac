@@ -13,111 +13,32 @@
 import astropy.units as u
 import numpy as np
 
-from scipy.integrate import quad
-
 from crpropa import GridProperties,Vector3d,Grid1f
 from crpropa import DensityGrid
 
-from .dmsource import dm_mass_density
+from .profiles import dm_mass_density
+from .smooth import get_smooth_dm_density
 
-from ..tools.conversions import convert_density,convert_mass
+from ..tools.conversions import convert_density
 
-from ..tools.customerrors import DMProfileError
-
-from loguru import logger
-
-# allowed_profiles = ["nfw","burkert","einasto"]
-allowed_profiles      = ["nfw"]
-allowed_spatial_types = ["pointlike","extended_smooth"]
-
+from .halo import DMHalo
 
 def SmoothDMHaloMassDensityGrid(
-    dmhalo_center  : u.Quantity,
-    obs_radius     : u.Quantity,
-    ncells         : int,
-    rs             : u.Quantity,
-    rhos           : u.Quantity,
-    rsat           : u.Quantity,
-    rhosat         : u.Quantity,
-    rtrunc         : u.Quantity,
-    total_mass     : u.Quantity,
-    chunksize      : int = 32,
-    dmprofile      : str = "nfw"
-    # save           : bool=False
-) -> DensityGrid:
-    
-    r"""
-    Get a Grid1f with a PDF for sampling position following the 
-    DM density in a spherical halo. The PDF is normalized by 
-    the decay luminosity (Total enclosed mass):
+    dmhalo_center : u.Quantity,
+    obs_radius    : u.Quantity,
+    ncells        : int,
+    halo          : DMHalo,
+    chunksize     : int = 32
+) -> DensityGrid :
 
-    $PDF = \frac{\rho(r)}{\mathfrak{L}_\text{Dec}}$
-
-    All vectors are given in the Observer's coordinate system (OCS). 
-
-    For the Grid1f we assume the same number of cells in each direction.
-    As for now, we need to specify what is the type of gas density used 
-    to compute the DensityGrid. This is specified by three booleans during 
-    the declaration of the DensityGRid object. The booleans refer to the 
-    cases where the DensityGrid represents H, HI or HII gas densities. 
-    By default, we indicate that our DensityGrid is for H, but we don't 
-    actually care about this, as we are only using this as a source 
-    sampling function.
-
-    Then, we normalize by the total mass to directly get a 
-    mass distribution function normalized to one, and check if that 
-    can accelerate the computation time.
-
-    We ask for an odd number of cells to make sure that the center of 
-    the DM halo is an actual point (vertice) of the grid. This is to do 
-    a correct source sampling.
-
-        :param dmhalo_center: Center of the DM halo
-        :type dmhalo_center: u.Quantity
-        :param obs_radius: Radius of the observer/halo $R_{200}$
-        :type obs_radius: u.Quantity
-        :param ncells: [Odd] Number of cells
-        :type ncells: int
-        :param rs: Scale radius
-        :type rs: u.Quantity
-        :param rhos: Scale density
-        :type rhos: u.Quantity
-        :param rsat: Saturation radius
-        :type rsat: u.Quantity
-        :param rhosat: Saturation Density
-        :type rhosat: u.Quantity
-        :param rtrunc: Truncation radius
-        :type rtrunc: u.Quantity
-        :param total_mass: Total mass of the DM halo
-        :type total_mass: u.Quantity
-        :param chunksize: Number of points to compute per chunk
-        :type chunksize: int
-        :param dmprofile: Label of the DM density profile
-        :type dmprofile: str
-        :return: PDF Grid for decaying DM
-        :rtype: DensityGrid
-    """
-
-    # We use the units of the scale radius as a natural choice
-    # to compare and convert between the different units
-
-    # As you can see, I am not checking the dimension of the arrays
-
-    lunit   = rs.unit
+    lunit   = halo.rs.unit
     halo_c  = dmhalo_center.to(lunit)
     obs_r   = obs_radius.to(lunit)
     box_or  = halo_c - obs_r
     box_f   = halo_c + obs_r
     step    = 2*obs_r/(ncells-1)
-    rsat_   = rsat.to(lunit)
-    rtrunc_ = rtrunc.to(lunit)
-    rhos_   = convert_density(rhos,u.Msun/lunit**3)
-    rhosat_ = convert_density(rhosat,u.Msun/lunit**3)
-    mass    = total_mass.to(u.Msun,equivalencies=u.mass_energy())
+    mass    = halo.m200
 
-    # xs = np.arange(box_or[0].value,box_f[0].value,step=step.value)
-    # ys = np.arange(box_or[1].value,box_f[1].value,step=step.value)
-    # zs = np.arange(box_or[2].value,box_f[2].value,step=step.value)
     xs = np.linspace(box_or[0].value,box_f[0].value,num=ncells)
     ys = np.linspace(box_or[1].value,box_f[1].value,num=ncells)
     zs = np.linspace(box_or[2].value,box_f[2].value,num=ncells)
@@ -151,15 +72,7 @@ def SmoothDMHaloMassDensityGrid(
                     (Zchunk - halo_c[2].value)**2
                 )*lunit
 
-                rho_[i:istop,j:jstop,k:kstop] = dm_mass_density(
-                    r,
-                    rs,
-                    rhos_,
-                    rsat_,
-                    rhosat_,
-                    rtrunc_,
-                    dmprofile=dmprofile,
-                ).value
+                rho_[i:istop,j:jstop,k:kstop] = halo.rho_tot(r).value
 
     rho_    = rho_/mass.value
 
@@ -194,18 +107,12 @@ def SmoothDMHaloMassDensityGrid(
     return dens
 
 def SmoothDMHaloMassSquaredDensityGrid(
-    dmhalo_center  : u.Quantity,
-    obs_radius     : u.Quantity,
-    ncells         : int,
-    rs             : u.Quantity,
-    rhos           : u.Quantity,
-    rsat           : u.Quantity,
-    rhosat         : u.Quantity,
-    rtrunc         : u.Quantity,
-    total_dmlum    : u.Quantity,
-    chunksize      : int = 32,
-    dmprofile      : str = "nfw"
-    # save           : bool=False
+    dmhalo_center : u.Quantity,
+    obs_radius    : u.Quantity,
+    ncells        : int,
+    halo          : DMHalo,
+    chunksize     : int = 32,
+    subhalos      : bool = False,
 ) -> DensityGrid:
     r"""
     Get a Grid1f with a PDF for sampling position following the 
@@ -263,17 +170,12 @@ def SmoothDMHaloMassSquaredDensityGrid(
 
     # As you can see, I am not checking the dimension of the arrays
 
-    lunit   = rs.unit
+    lunit   = halo.rs.unit
     halo_c  = dmhalo_center.to(lunit)
     obs_r   = obs_radius.to(lunit)
     box_or  = halo_c - obs_r
     box_f   = halo_c + obs_r
     step    = 2*obs_r/(ncells-1)
-    rsat_   = rsat.to(lunit)
-    rtrunc_ = rtrunc.to(lunit)
-    rhos_   = convert_density(rhos,u.Msun/lunit**3)
-    rhosat_ = convert_density(rhosat,u.Msun/lunit**3)
-    dmlum   = total_dmlum.to(u.Msun**2/lunit**3,equivalencies=u.mass_energy())
 
     # xs = np.arange(box_or[0].value,box_f[0].value,step=step.value)
     # ys = np.arange(box_or[1].value,box_f[1].value,step=step.value)
@@ -311,15 +213,15 @@ def SmoothDMHaloMassSquaredDensityGrid(
                     (Zchunk - halo_c[2].value)**2
                 )*lunit
 
-                dmd = dm_mass_density(
-                    r,
-                    rs,
-                    rhos_,
-                    rsat_,
-                    rhosat_,
-                    rtrunc_,
-                    dmprofile=dmprofile,
-                ).value
+                if subhalos:
+
+                    dmd   = halo.rho_smooth(r).value
+                    dmlum = halo.l_dm_anna_sub
+
+                else:
+
+                    dmd   = halo.rho_tot(r).value
+                    dmlum = halo.l_dm_anna
 
                 rho_[i:istop,j:jstop,k:kstop] = dmd**2
 
