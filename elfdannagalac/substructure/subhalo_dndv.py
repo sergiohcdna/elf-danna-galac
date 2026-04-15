@@ -12,7 +12,7 @@
 
 import astropy.units as u
 
-from ..dmsrc.dmsource import NFW_profile,get_enclosed_mass_nfw
+from ..dmsrc.profiles import NFW_profile,get_enclosed_mass_nfw
 
 def p_nsub_v(
     r      : u.Quantity,
