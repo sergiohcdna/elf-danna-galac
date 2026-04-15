@@ -12,7 +12,7 @@
 
 import astropy.units as u
 
-from ..dmsrc.dmsource import get_enclosed_mass_nfw
+from ..dmsrc.profiles import get_enclosed_mass_nfw
 
 
 def luminosity_decay_nfw(
