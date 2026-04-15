@@ -30,14 +30,14 @@ from crpropa import ModuleList
 from ..magneticfield.bfields import get_cluster_field
 from ..observer.observers import preparePhotonObserver
 
-from ..dmsrc.dmsource import dm_mass_density
+from ..dmsrc.profiles import dm_mass_density
 
 from ..dmsrc.grids import (
     SmoothDMHaloMassDensityGrid,
     SmoothDMHaloMassSquaredDensityGrid
 )
 
-from ..dmsrc.dmsource import allowed_spatial_types,allowed_profiles
+from ..dmsrc.profiles import allowed_spatial_types,allowed_profiles
 from ..dmsrc.halo import DMHalo
 
 from ..dmsrc.sources import (
