@@ -20,11 +20,18 @@ from astropy.cosmology import FlatLambdaCDM
 from ..astrofactors.jfactor import luminosity_anna_nfw,luminosity_anna_nfw_tot
 from ..astrofactors.dfactor import luminosity_decay_nfw
 from .concentrations import get_c,get_c_sub
-from .dmsource import get_rhosat,get_enclosed_mass_nfw,NFW_profile
+from .profiles import get_rhosat,get_enclosed_mass_nfw,NFW_profile
 from .smooth import get_smooth_dm_density
 from ..substructure.population import SubHaloPopulation
 from ..substructure.samplers import dndm_PL,dndvCoredNFW
-from ..substructure.subhalos import msub_tot,nsub_tot,p_nsub_tot,nsub_r,rhosub
+from ..substructure.subhalos import (
+    msub_tot,
+    nsub_tot,
+    p_nsub_tot,
+    nsub_r,
+    rhosub,
+    msh_average
+)
 from ..tools.conversions import convert_mass,convert_density
 
 from ..tools.customerrors import DMProfileError,SubHaloMassError
@@ -181,9 +188,10 @@ class DMHalo():
             self._ldecay.to(u.GeV,equivalencies=u.mass_energy())
         )
 
-        self._kw   = self.get_kw()
-        self._nsub = self.get_nnorm()
-        self._msub = self.get_msub(self._r200,self._msub_min,self._msub_max)
+        self._kw    = self.get_kw()
+        self._nsub  = self.get_nnorm()
+        self._msub  = self.get_msub(self._r200,self._msub_min,self._msub_max)
+        self._mshav = self.get_average_subhalo_mass()
 
         self._dlum  = cosmo.luminosity_distance(self._z).to(lunit)
         self._coord = SkyCoord(ra=ra,dec=dec,frame="icrs",distance=self._dlum)
@@ -313,6 +321,11 @@ class DMHalo():
         return self._msub
 
     @property
+    def msh_average(self):
+
+        return self._mshav
+
+    @property
     def dlum(self):
 
         return self._dlum
@@ -370,6 +383,7 @@ class DMHalo():
             f" (from [{self._msub_min:0.3e},{self._msub_max:0.3e}])\n"
             f"\t- Total mass in form of subhalos: {self._msub:0.3e} "
             f"({self._fsub*100.0}% of the cluster mass)\n"
+            f"\t- Average Subhalo Mass: {self._mshav:0.3e}\n"
             f"\t- Annihilation emissivity [No sub]: {self._lanna:0.3e} "
             f"({self._lannapp:0.3e})\n"
             f"\t- Annihilation emissivity [With sub]: {self._lannasub:0.3e} "
@@ -389,13 +403,15 @@ class DMHalo():
             f"annihilation cross section {self._dmsigmav:0.2e} "
             "were used. \n"
             "For decay, the luminosity was estimated assuming a "
-            f"lifetime of 1.00e27 s."
+            f"lifetime of 1.00e27 s. \n"
+            "We do not consider that the subhalo depends on the "
+            "radial position of the subhalo itself. Then, the "
+            "average subhalo mass is constant for all radii."
         )
 
         logger.warning(msg)
 
         return
-
 
     def get_m200(self) -> u.Quantity:
 
@@ -451,15 +467,7 @@ class DMHalo():
                 self._rhosat,
                 self._r200,
                 self._m200,
-                self._msub_min,
-                self._msub_max,
-                self._sigmac,
-                self._indexpm,
-                self._h,
-                self._kw,
-                self._nsub,
-                self._shpop,
-                self._csublabel
+                self._mshav
             )
 
         else:
@@ -692,6 +700,31 @@ class DMHalo():
 
         return density
 
+    def get_average_subhalo_mass(self):
+
+        msg = (
+            "At this moment, the mass of the subhalo has not "
+            "any dependance on the radial distance of the subhalo "
+            "to the center of the host halo. Then, it is sufficient "
+            "to just compute the average at the scale radius as "
+            "the average subhalo mass is constant across the host halo."
+        )
+
+        logger.info(msg)
+
+        msh = msh_average(
+            self._rs,
+            self._msub_min,
+            self._msub_max,
+            self._r200,
+            self._sigmac,
+            self._indexpm,
+            h      = self._h,
+            clabel = self._csublabel
+        )
+
+        return msh*self._kw
+
     def rho_sub(self,r:u.Quantity) -> u.Quantity:
 
         """
@@ -707,21 +740,16 @@ class DMHalo():
 
         density = rhosub(
             r_,
-            self._msub_min,
-            self._msub_max,
             self._rs,
             self._rhos,
             self._rsat,
             self._rhosat,
             self._r200,
             self._m200,
-            self._sigmac,
-            self._indexpm,
-            h      = self._h,
-            clabel = self._csublabel
+            self._mshav
         )
 
-        return density * self._kw * self._nsub
+        return density
 
     def rho_smooth(self,r:u.Quantity) -> u.Quantity:
 
@@ -735,15 +763,8 @@ class DMHalo():
             self._rhosat,
             self._r200,
             self._m200,
-            self._msub_min,
-            self._msub_max,
-            self._sigmac,
-            self._indexpm,
-            self._h,
-            self._kw,
-            self._nsub,
+            self._mshav,
             self._dmprofile,
-            self._csublabel
         )
 
         return density
