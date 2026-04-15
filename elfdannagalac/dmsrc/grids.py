@@ -28,6 +28,8 @@ def SmoothDMHaloMassDensityGrid(
     obs_radius    : u.Quantity,
     ncells        : int,
     halo          : DMHalo,
+    r_inner       : u.Quantity,
+    rho_inner     : u.Quantity,
     chunksize     : int = 32
 ) -> DensityGrid :
 
@@ -74,6 +76,10 @@ def SmoothDMHaloMassDensityGrid(
 
                 rho_[i:istop,j:jstop,k:kstop] = halo.rho_tot(r).value
 
+                if r_inner >= step:
+
+                    rho_[np.where(r <= r_inner)] = rho_inner.value
+
     rho_    = rho_/mass.value
 
     # Because CRpropa use SI unit system
@@ -111,6 +117,8 @@ def SmoothDMHaloMassSquaredDensityGrid(
     obs_radius    : u.Quantity,
     ncells        : int,
     halo          : DMHalo,
+    r_inner       : u.Quantity,
+    rho_inner     : u.Quantity,
     chunksize     : int = 32,
     subhalos      : bool = False,
 ) -> DensityGrid:
@@ -218,10 +226,18 @@ def SmoothDMHaloMassSquaredDensityGrid(
                     dmd   = halo.rho_smooth(r).value
                     dmlum = halo.l_dm_anna_sub
 
+                    if r_inner >= step:
+
+                        dmd[np.where(r <= r_inner)] = rho_inner.value
+
                 else:
 
                     dmd   = halo.rho_tot(r).value
                     dmlum = halo.l_dm_anna
+
+                    if r_inner >= step:
+
+                        dmd[np.where(r <= r_inner)] = rho_inner.value
 
                 rho_[i:istop,j:jstop,k:kstop] = dmd**2
 
