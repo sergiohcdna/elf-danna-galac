@@ -10,6 +10,9 @@
 #             April-2026                                                      #
 ###############################################################################
 
+import astropy.units as u
+import numpy as np
+
 from crpropa import Vector3d
 from crpropa import DensityGrid
 from crpropa import (
@@ -20,7 +23,11 @@ from crpropa import (
     SourceIsotropicEmission,
     SourceParticleType,
     SourcePowerLawSpectrum,
+    SourceMultiplePositions,
+    SourceList
 )
+
+from ..substructure.population import SubHaloPopulation
 
 def preparePointLikeDMSource(
     dmsource_pos : Vector3d,
@@ -122,3 +129,81 @@ def prepareSmoothExtendedDMSource(
     dms.add(SourcePowerLawSpectrum(emin,emax,pl_index))
 
     return dms
+
+def prepareSubHaloDMSource(
+    shpop     : SubHaloPopulation,
+    ldmanna   : float,
+    redshift  : float,
+    part_type : int,
+    emin      : float,
+    emax      : float,
+    pl_index  : float
+) -> Source:
+    
+    shsources = SourceMultiplePositions()
+
+    for sh in shpop:
+
+        shsources.add(
+            Vector3d(
+                sh.x.to(u.m).value,
+                sh.y.to(u.m).value,
+                sh.z.to(u.m).value
+            ),
+            (sh.lanna.value+sh.cross.value)/ldmanna
+        )
+
+    dms = Source()
+
+    dms.add(shsources)
+    dms.add(SourceRedshift(redshift))
+    dms.add(SourceIsotropicEmission())
+    dms.add(SourceParticleType(part_type))
+    dms.add(SourcePowerLawSpectrum(emin,emax,pl_index))
+
+    return dms
+
+def prepareDMHaloSource(
+    dmdensity   : DensityGrid,
+    shpop       : SubHaloPopulation,
+    max_density : float,
+    ldmanna     : float,
+    maxTries    : int,
+    rmin        : float,
+    rmax        : float,
+    redshift    : float,
+    part_type   : int,
+    emin        : float,
+    emax        : float,
+    pl_index    : float,
+    w_smooth    : float,
+    w_subhalo   : float,
+) -> Source:
+
+    smooth = prepareSmoothExtendedDMSource(
+        dmdensity,
+        max_density,
+        maxTries,
+        rmin,
+        rmax,
+        redshift,part_type,
+        emin,
+        emax,
+        pl_index
+    )
+
+    subhalo = prepareSubHaloDMSource(
+        shpop,
+        ldmanna,
+        redshift,
+        part_type,
+        emin,
+        emax,
+        pl_index
+    )
+
+    slist = SourceList()
+    slist.add(smooth,w_smooth)
+    slist.add(subhalo,w_subhalo)
+
+    return slist
