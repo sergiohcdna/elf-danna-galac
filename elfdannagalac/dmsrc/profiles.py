@@ -31,7 +31,7 @@ allowed_spatial_types = ["pointlike","extended_smooth"]
 
 def get_rhosat(dmmass:u.Quantity,sigmav:u.Quantity)->u.Quantity:
 
-    """
+    r"""
     Compute the saturation density. We use the formula given in:
     https://clumpy.gitlab.io/CLUMPY/v3.1.1/physics_profiles.html:
 
