@@ -16,6 +16,11 @@ from .grids import (
 
 from .halo import DMHalo
 from .smooth import get_smooth_dm_density
-from .sources import preparePointLikeDMSource,prepareSmoothExtendedDMSource
+from .sources import (
+    preparePointLikeDMSource,
+    prepareSmoothExtendedDMSource,
+    prepareDMHaloSource,
+    prepareSubHaloDMSource
+)
 
 
