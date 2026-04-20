@@ -43,6 +43,7 @@ from ..dmsrc.halo import DMHalo
 from ..dmsrc.sources import (
     preparePointLikeDMSource,
     prepareSmoothExtendedDMSource,
+    prepareDMHaloSource,
 )
 
 from ..dmspectrum.dmspectra import ALLOWED_PROCESSES
@@ -133,6 +134,11 @@ def main():
         default="anna",
         choices=ALLOWED_PROCESSES,
         metavar="[anna,decay]"
+    )
+    src.add_argument(
+        "--subhalos",
+        help="Consider Subhalos?",
+        action=ap.BooleanOptionalAction
     )
     src.add_argument(
         '--emin',
@@ -412,15 +418,15 @@ def main():
 
         logger.info("You choose an extended source for this simulation")
         logger.info("Considering the smooth contribution of the DM halo ")
-        rho_trunc = dm_mass_density(
-            spacing,
-            cluster.rs,
-            cluster.rhos,
-            cluster.r_sat,
-            cluster.rho_sat,
-            cluster.r200,
-            cluster.DMrhoLabel
-        )
+
+        if args.subhalos and args.process.lower() == "anna":
+
+            rho_trunc = cluster.rho_smooth(spacing)
+
+        else:
+
+            rho_trunc = cluster.rho_tot(spacing)
+
         msg = (
             "To avoid numerical precision issues we do not use the "
             "saturation density during grid calculation. That implies "
@@ -443,17 +449,13 @@ def main():
                 cluster_center,
                 obsRadius,
                 args.ncells,
-                cluster.rs,
-                cluster.rhos,
+                cluster,
                 spacing,
                 rho_trunc,
-                cluster.r200,
-                cluster.m200,
                 args.chunksize,
-                dmprofile=cluster.DMrhoLabel
             )
 
-            maxdens = rho_trunc**2/cluster.l_dm_anna
+            maxdens = rho_trunc/cluster.l_dm_decay
 
         if args.process.lower() == "anna":
 
@@ -461,34 +463,66 @@ def main():
                 cluster_center,
                 obsRadius,
                 args.ncells,
-                cluster.rs,
-                cluster.rhos,
+                cluster,
                 spacing,
                 rho_trunc,
-                cluster.r200,
-                cluster.l_dm_anna,
                 args.chunksize,
-                dmprofile=cluster.DMrhoLabel
+                subhalos=args.subhalos
             )
 
-            maxdens = rho_trunc/cluster.l_dm_decay
+            maxdens = rho_trunc**2/cluster.l_dm_anna
 
-        s = prepareSmoothExtendedDMSource(
-            dmgrid,
-            maxdens.value,
-            int(args.maxtries),
-            rmin.to(u.m).value,
-            rmax.to(u.m).value,
-            cluster.z,
-            part_type,
-            e_emin,
-            e_emax,
-            pl_index,
-        )
+        if args.subhalos and args.process.lower() == "anna":
+
+            l_sub   = np.sum(cluster.shpop.to_qtable()["lanna"])
+            l_cross = np.sum(cluster.shpop.to_qtable()["cross"])
+            l_tot   = cluster.l_dm_anna_sub
+
+            w_smooth  = (l_tot - l_sub - l_cross) / l_tot
+            w_subhalo = (l_sub + l_cross) / l_tot
+
+            msg = (
+                "\nUsing smooth and subhalo contributions with weights: \n"
+                f"\t- Smooth: {w_smooth:0.5f} \n"
+                f"\t- Subhalo: {w_subhalo:0.5f}\n"
+            )
+
+            logger.info(msg)
+
+            s = prepareDMHaloSource(
+                dmgrid,
+                cluster.shpop,
+                maxdens.value,
+                cluster.l_dm_anna_sub.value,
+                int(args.maxtries),
+                rmin.to(u.m).value,
+                rmax.to(u.m).value,
+                cluster.z,
+                part_type,
+                e_emin,
+                e_emax,
+                pl_index,
+                w_smooth.value,
+                w_subhalo.value
+            )
+
+        else:
+
+            s = prepareSmoothExtendedDMSource(
+                dmgrid,
+                maxdens.value,
+                int(args.maxtries),
+                rmin.to(u.m).value,
+                rmax.to(u.m).value,
+                cluster.z,
+                part_type,
+                e_emin,
+                e_emax,
+                pl_index,
+            )
 
     logger.info(f"Maximum of the PDF: {maxdens:0.5e}")
     logger.info(s.getDescription())
-    # logger.info(s.getCandidate().source)
 
     # Here we prepare the CRpropa file output 
     # with some default parameters.
