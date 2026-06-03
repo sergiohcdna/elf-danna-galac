@@ -18,7 +18,9 @@ dependencies = [
     "astropy",
     "matplotlib",
     "numpy",
-    "loguru"
+    "loguru",
+    "scipy",
+    "ebltable"
 ]
 
 [tool.setuptools.packages.find]
