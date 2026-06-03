@@ -21,3 +21,7 @@ class DMProfileError(Exception):
 class DMConcentrationError(Exception):
 
     pass
+
+class DMProcessError(Exception):
+
+    pass
