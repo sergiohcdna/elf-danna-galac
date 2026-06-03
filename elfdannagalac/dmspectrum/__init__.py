@@ -5,3 +5,11 @@ from .dmspectra import (
     ALLOWED_PROCESSES,
     ALLOWED_PROJECTS
 )
+from .weightning import (
+    powerlawPDF,
+    dmdecayNorm,
+    dmdecayPDF,
+    Qe_dmanna,
+    Qe_dmdecay,
+    weigths_PL_sim
+)
