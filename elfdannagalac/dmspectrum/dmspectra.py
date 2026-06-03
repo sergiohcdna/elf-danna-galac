@@ -568,6 +568,11 @@ class dmspectrum():
 
         return dminterp
 
+
+    def interpolator(self):
+
+        return self._interpolator(self._channel,self._project)
+
     def spectrum(self):
 
         dm_interp = self._interpolator(self._channel,self._project)
