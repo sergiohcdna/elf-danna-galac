@@ -10,7 +10,7 @@ authors = [
 ]
 
 name = "elfdannagalac"
-version = "0.1.2"
+version = "0.2.0"
 description = "Invoking a witch (or wizard?) to search for the black relics in clusters of galaxies!"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -29,4 +29,5 @@ where = ["."]
 [project.scripts]
 diffedm = "elfdannagalac.scripts.diff_edm:main"
 countsmap = "elfdannagalac.scripts.plotmaps:get_counts_map"
+getdnde = "elfdannagalac.scripts.dnde_luminosity:main"
 
