@@ -781,15 +781,19 @@ class DMHalo():
         from scipy.stats import norm,lognorm
         from time import time
 
+        rng = np.random.default_rng(seed=42)
+
         msh_sampler = dndm_PL(
             alpha = self._indexpm,
             m_min = self._msub_min.value,
             m_max = self._msub_max.value
         )
 
+        nsubs = rng.poisson(lam=self._nsub)
+
         masses = msh_sampler.rvs(
-            size         = self._nsub,
-            random_state = int(time())
+            size         = nsubs,
+            random_state = 42
         )*u.Msun
 
         rsh_sampler = dndvCoredNFW(
@@ -799,11 +803,14 @@ class DMHalo():
         )
 
         rpositions = rsh_sampler.rvs(
-            size         = self._nsub,
-            random_state = int(time())
+            size         = nsubs,
+            random_state = 42
         )*self._rs.unit
 
-        x,y,z  = norm.rvs(size=(3,rpositions.value.size))
+        x,y,z  = norm.rvs(
+            size         = (3,rpositions.value.size),
+            random_state = 42
+        )
         r_unit = np.sqrt(x**2+y**2+z**2)
 
         x_sh = x*rpositions/r_unit + self._cart.x
@@ -820,8 +827,9 @@ class DMHalo():
 
         c_vals = lognorm.rvs(
             self._sigmac*np.log(10),
-            scale=c_mean,
-            size=self._nsub
+            scale        = c_mean,
+            size         = nsubs,
+            random_state = 42
         )
 
         r200_vals  = np.cbrt(3*masses/(800*np.pi*self._rhoc))
