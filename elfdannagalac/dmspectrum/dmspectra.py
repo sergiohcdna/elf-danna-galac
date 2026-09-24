@@ -48,6 +48,15 @@ ALLOWED_PROCESSES = ('anna','decay')
 
 ALLOWED_PROJECTS = ('cosmixs','pppc4dmid')
 
+
+ALLOWED_PARTICLES = ('positrons', 'gamma', 'antiprotons')
+
+PARTICLE_FILENAMES = {
+    'positrons': 'AtProduction-Positrons.dat',
+    'gamma': 'AtProduction-Gamma.dat',
+    'antiprotons': 'AtProduction-AntiP.dat'
+}
+
 # @ValidString("_eblmodel",empty_allowed=False,options=ALLOWED_EBLMODELS)
 @ValidString("_process",empty_allowed=False,options=ALLOWED_PROCESSES)
 @ValidString("_project",empty_allowed=False,options=ALLOWED_PROJECTS)
@@ -66,23 +75,25 @@ class dmspectrum():
     """
 
     def __init__(self,dm_mass,emin,emax,channel,process='anna',
-                 project='cosmixs',epoints=100, nbins=10):
+                 project='cosmixs',epoints=100, nbins=10, particle='positrons'):
         """
         Initiate dark matter class
 
         Parameters
         ----------
 
-        dm_mass : Mass of dark matter particle in GeV
-                  Because cosmiXs and PPPC4DMID use GeV
-        emin    : Minimum energy to compute spectra (GeV)
-        emax    : Maximum energy to compute spectra (GeV)
-        channel : Annihilation/Decay channel
-        process : Annihilation (anna) or Decay (decay) of
+        dm_mass  : Mass of dark matter particle in GeV
+                   Because cosmiXs and PPPC4DMID use GeV
+        emin     : Minimum energy to compute spectra (GeV)
+        emax     : Maximum energy to compute spectra (GeV)
+        channel  : Annihilation/Decay channel
+        process  : Annihilation (anna) or Decay (decay) of
                   dark matter particles
-        project : DATA Project used to compute the spectrum
-        epoints : Number of points in energy spectrum
-        nbins   : Number of energy bins used to compute weights
+        project  : DATA Project used to compute the spectrum
+        epoints  : Number of points in energy spectrum
+        nbins    : Number of energy bins used to compute weights
+        particle : Type of particle to compute spectrum for
+                   Options: 'positrons', 'gamma', 'antiprotons'
         """
 
         # First, setting some properties of the class that don't
@@ -92,6 +103,7 @@ class dmspectrum():
         self._project  = project
         self._epoints  = epoints
         self._nbins    = nbins
+        self._particle = particle
    
         # This is the same variable that both projects
         # use to give the spectrum.
@@ -100,6 +112,11 @@ class dmspectrum():
         # possible precission problems
         xmin      = emin/dm_mass
         log10xmin = np.log10(xmin)
+
+        if particle not in ALLOWED_PARTICLES:
+                            msg = (f'\nParticle type "{particle}" is not valid\n' +
+                                f'Options are {ALLOWED_PARTICLES}')
+                            raise ValueError(msg)
 
         # Setting extra properties of the class
         # based in what project we are using to
@@ -199,6 +216,8 @@ class dmspectrum():
 
         #   Return
         return
+
+        
 
     @staticmethod
     def _earray(emin,emax,epoints):
@@ -538,11 +557,11 @@ class dmspectrum():
 
 
     @staticmethod
-    def _interpolator(ch,dproject):
+    def _interpolator(ch,dproject,particle='positrons'):
 
         BASEDIR = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
         dataloc = os.path.join(BASEDIR,'data',dproject)
-        fname   = 'AtProduction-Positrons.dat'
+        fname   = PARTICLE_FILENAMES[particle]
         fname   = os.path.join(dataloc,fname)
 
         data = np.genfromtxt(fname,names=True)
@@ -571,11 +590,11 @@ class dmspectrum():
 
     def interpolator(self):
 
-        return self._interpolator(self._channel,self._project)
+        return self._interpolator(self._channel,self._project,self._particle)
 
     def spectrum(self):
 
-        dm_interp = self._interpolator(self._channel,self._project)
+        dm_interp = self._interpolator(self._channel,self._project,self._particle)
 
         if self._process == 'anna':
 
@@ -643,4 +662,18 @@ class dmspectrum():
         self._weights = self._Weights(self._energy,self.spectrum(),self._ebins,self._nbins)
 
         #Return
+        return
+
+    @property
+    def particle(self):
+        return self._particle
+
+    @particle.setter
+    def particle(self, ptype):
+        if ptype not in ALLOWED_PARTICLES:
+            msg = (f'\nParticle type "{ptype}" is not valid\n' +
+                f'Options are {ALLOWED_PARTICLES}')
+            raise ValueError(msg)
+        
+        self._particle = ptype
         return

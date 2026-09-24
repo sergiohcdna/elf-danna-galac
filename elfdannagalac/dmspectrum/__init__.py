@@ -9,6 +9,8 @@ from .weightning import (
     powerlawPDF,
     dmdecayNorm,
     dmdecayPDF,
+    dmannaNorm,
+    dmannaPDF,
     Qe_dmanna,
     Qe_dmdecay,
     weigths_PL_sim

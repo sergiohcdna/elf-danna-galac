@@ -56,8 +56,33 @@ def dmdecayNorm(
     eup  = emax.to(u.GeV).value
     dmm  = dmmass.to(u.GeV).value
 
-    log10xmin = np.log10(elow/dmm)
-    log10xmax = np.log10(eup/dmm)
+    log10xmin = np.log10(elow/(0.5*dmm))
+    log10xmax = np.log10(eup/(0.5*dmm))
+
+    norm,_ = quad(
+        lambda x,mass : interpolator((0.5*mass,x))/(0.5*mass*10**x*np.log(10)),
+        log10xmin,
+        log10xmax,
+        args=(dmm)
+    )
+
+    return norm
+
+def dmannaNorm(
+    interpolator : RegularGridInterpolator,
+    dmmass       : u.Quantity,
+    emin         : u.Quantity,
+    emax         : u.Quantity
+) -> float:
+
+    from scipy.integrate import quad
+
+    elow = emin.to(u.GeV).value
+    eup  = emax.to(u.GeV).value
+    dmm  = dmmass.to(u.GeV).value
+
+    log10xmin = np.log10(elow/(dmm))
+    log10xmax = np.log10(eup/(dmm))
 
     norm,_ = quad(
         lambda x,mass : interpolator((mass,x))/(mass*10**x*np.log(10)),
@@ -77,11 +102,27 @@ def dmdecayPDF(
 
     e      = eng.to(u.GeV).value
     dmm    = dmmass.to(u.GeV).value
-    log10x = np.log10(e/dmm)
+    log10x = np.log10(e/(0.5*dmm))
+
+    val = interpolator((0.5*dmm,log10x))/(0.5*dmm*10**log10x*np.log(10))
+
+    return val/norm
+
+def dmannaPDF(
+    interpolator : RegularGridInterpolator,
+    eng          : u.Quantity,
+    dmmass       : u.Quantity,
+    norm         : float
+):
+
+    e      = eng.to(u.GeV).value
+    dmm    = dmmass.to(u.GeV).value
+    log10x = np.log10(e/(dmm))
 
     val = interpolator((dmm,log10x))/(dmm*10**log10x*np.log(10))
 
     return val/norm
+
 
 def Qe_dmdecay(
     dmmass   : u.Quantity,
@@ -94,7 +135,7 @@ def Qe_dmdecay(
     dmm   = dmmass.to(u.GeV)
     dmtau = lifetime.to(u.s)
 
-    rate = 4*np.pi*m*norm/dmm/dmtau
+    rate = m*norm/dmm/dmtau
 
     return rate
 
@@ -108,12 +149,12 @@ def Qe_dmanna(
     norm      : float
 ) -> u.Quantity:
 
-    dmm  = dmmass.to(u.GeV).value
-    sv   = sigma_v.to(u.cm**3/u.s).value
+    dmm  = dmmass.to(u.GeV)
+    sv   = sigma_v.to(u.cm**3/u.s)
     rhos = rho_scale.to(u.GeV/u.cm**3,equivalencies=u.mass_energy())
     rs   = r_scale.to(u.cm)
     term = 1 - 1/((1+c200)**3)
-    rate = 4*np.pi*rhos**2*rs**3*sv*term*norm/(3*dmm*2)
+    rate = 4*np.pi*rhos**2*rs**3*sv*term*norm/(3*dmm**2)
 
     return rate
 
@@ -154,7 +195,7 @@ def weigths_PL_sim(
 
         # For now, I will only use the same function as in the case
         # for decay
-        pdfdm = dmdecayPDF(dndedm_interp,e_e0,dmm,dmNorm)
+        pdfdm = dmannaPDF(dndedm_interp,e_e0,dmm,dmNorm)
 
     spectrum_weight = ndot * pdfdm / nsim_e / pdfPL
 
