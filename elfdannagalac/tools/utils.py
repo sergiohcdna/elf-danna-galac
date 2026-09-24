@@ -20,6 +20,8 @@ from crpropa import Mpc,GeV
 
 from pathlib import Path
 
+from ..io.parquetout import AsyncDynamicParquetOutput
+
 # #	D	time	z	SN	ID	E	X	Y	Z	Px	Py	Pz	SN0	ID0	E0	X0	Y0	Z0	P0x	P0y	P0z	SN1	ID1	E1	X1	Y1	Z1	P1x	P1y	P1z	W	tag
 
 def create_table(
@@ -118,3 +120,17 @@ def prepareOutput(ofname:Path) -> TextOutput:
     thisout.setEnergyScale(GeV)
 
     return thisout
+
+def prepareParquetOutput(ofname:Path):
+
+    Out = AsyncDynamicParquetOutput(
+        ofname,
+        # fields=Output.Everything,
+        energy_unit   = GeV,
+        batch_size    = 50000,
+        queue_maxsize = 1000
+    )
+    Out.enable(Output.WeightColumn)
+    Out.enable(Output.CandidateTagColumn)
+
+    return Out
