@@ -8,6 +8,7 @@
 #   - Constant magnetic vector                                                #
 #   - Constant diffusion coefficient                                          #
 #   - only IC with CMB photons                                                #
+#   - Data is now saved to parquet files                                      #
 #-----------------------------------------------------------------------------#
 #                      THE ELF-DANNA-GALAC Task force                         #
 #                      - Arlette Melo Galindo                                 #
@@ -15,6 +16,7 @@
 #                      - Sergio Hernández Cadena                              #
 #-----------------------------------------------------------------------------#
 #             November-2025                                                   #
+#             August-2026                                                     #
 ###############################################################################
 
 import astropy.units as u
@@ -25,7 +27,7 @@ from crpropa import Vector3d
 from crpropa import DiffusionSDE
 from crpropa import SphericalBoundary,MaximumTrajectoryLength
 from crpropa import CMB,EMInverseComptonScattering
-from crpropa import ModuleList
+from crpropa import ModuleList,Output
 
 from ..magneticfield.bfields import get_cluster_field
 from ..observer.observers import preparePhotonObserver
@@ -48,7 +50,9 @@ from ..dmsrc.sources import (
 
 from ..dmspectrum.dmspectra import ALLOWED_PROCESSES
 
-from ..tools.utils import create_table,prepareOutput
+from ..io.parquetout import AsyncDynamicParquetOutput
+
+from ..tools.utils import prepareParquetOutput
 
 import argparse as ap
 import time
@@ -244,15 +248,15 @@ def main():
     )
     src.add_argument(
         '--ofname',
-        help='Output file name [fits,fits.gz]',
-        type=str,
+        help='Output file name [parquet]',
+        type=Path,
         required=False,
         default='output.fits'
     )
     src.add_argument(
         '--odir',
         help='Output directory to save files',
-        type=str,
+        type=Path,
         required=False,
         default='./',
         metavar='./'
@@ -267,11 +271,13 @@ def main():
     logger.info("Getting parameters")
     args = options.parse_args()
 
-    outpath = Path(args.odir)
+    outpath = args.odir
     checkDir(outpath)
 
     msg = "Unknown file extension to save results"
-    assert args.ofname.lower().endswith(("fits.gz","fits")),logger.error(msg)
+    assert str(
+        args.ofname
+    ).lower().endswith(("parquet")),logger.error(msg)
 
     logger.info(f"Preparing simulation for DM {args.process} in a cluster")
 
@@ -284,7 +290,7 @@ def main():
         args.r200*u.kpc,
         dmsigmav=3.6e-24*u.cm**3/u.s,
         fsub=0.11,
-        msub_min=1e-5*args.m200*u.Msun,
+        msub_min=1e8*u.Msun,
         msub_max=1e-2*args.m200*u.Msun,
         index_pm=-1.9,
         mpoints=5
@@ -489,6 +495,10 @@ def main():
 
             logger.info(msg)
 
+            logger.info("Subhalo catalog saved")
+            shfname = outpath/f"{args.srcname}SubhaloCatalog.fits"
+            cluster.shpop.save_to_fits(shfname)
+
             s = prepareDMHaloSource(
                 dmgrid,
                 cluster.shpop,
@@ -527,16 +537,9 @@ def main():
     # Here we prepare the CRpropa file output 
     # with some default parameters.
 
-    logger.info("Preparing CRpropa txtOutput to save data")
-    if args.ofname.lower().endswith("fits"):
-
-        fname = outpath/args.ofname.replace("fits","txt")
-
-    if args.ofname.lower().endswith("fits.gz"):
-
-        fname = outpath/args.ofname.replace("fits.gz","txt")
-
-    Out = prepareOutput(fname)
+    logger.info("Preparing parquet to save data")
+    fname = outpath/args.ofname
+    Out   = prepareParquetOutput(fname)
 
     # Now, we configure the observer
     # For this test, we will consider an observer on a sphere
@@ -591,10 +594,6 @@ def main():
     sim.setShowProgress(True)
     sim.run(s,N,True)
     Out.close()
-
-
-    logger.info("Saving data to fits table")
-    create_table(fname,outpath/args.ofname)
 
     # Plotting and post-processing is done in another script
 
